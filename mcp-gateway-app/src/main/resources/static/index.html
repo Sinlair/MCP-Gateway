@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Gateway Console</title>
+    <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+<div class="backdrop"></div>
+<main class="shell">
+    <section class="hero">
+        <div>
+            <p class="eyebrow">MCP Gateway</p>
+            <h1>Website Console for Routing, Policy, and Tool Execution</h1>
+            <p class="lead">
+                This console manages upstream MCP services, tool definitions, access policies,
+                and mock execution flow from one Spring Boot site.
+            </p>
+        </div>
+        <div class="hero-card">
+            <p class="hero-label">Demo credentials</p>
+            <button id="useAdmin" class="ghost-button">Use demo admin</button>
+            <button id="useApp" class="ghost-button">Use demo app</button>
+            <div class="credential-note">
+                <span>API Key</span>
+                <strong id="activeCredential">demo-admin-key</strong>
+            </div>
+        </div>
+    </section>
+
+    <section class="grid two-col">
+        <article class="panel">
+            <div class="panel-header">
+                <div>
+                    <p class="panel-kicker">Access</p>
+                    <h2>Caller Context</h2>
+                </div>
+            </div>
+            <form id="authForm" class="stack">
+                <label>
+                    Environment
+                    <input id="environment" name="environment" value="dev">
+                </label>
+                <label>
+                    Auth Mode
+                    <select id="authModeSelect" name="authModeSelect">
+                        <option value="apiKey">API Key</option>
+                        <option value="bearer">Bearer Token</option>
+                    </select>
+                </label>
+                <label>
+                    Credential
+                    <input id="credential" name="credential" value="demo-admin-key">
+                </label>
+                <label>
+                    Session Id
+                    <input id="sessionId" name="sessionId" placeholder="optional session id">
+                </label>
+                <button type="submit" class="primary-button">Apply credential</button>
+            </form>
+        </article>
+
+        <article class="panel">
+            <div class="panel-header">
+                <div>
+                    <p class="panel-kicker">Health</p>
+                    <h2>Gateway Overview</h2>
+                </div>
+                <button id="refreshOverview" class="ghost-button">Refresh</button>
+            </div>
+            <div id="overviewCards" class="stats-grid"></div>
+            <div id="overviewServers" class="list-card"></div>
+        </article>
+    </section>
+
+    <section class="grid two-col">
+        <article class="panel">
+            <div class="panel-header">
+                <div>
+                    <p class="panel-kicker">Admin</p>
+                    <h2>Upstream Servers</h2>
+                </div>
+                <button id="loadUpstreams" class="ghost-button">Reload</button>
+            </div>
+            <form id="upstreamForm" class="grid-form">
+                <label>Server Code<input name="serverCode" placeholder="weather"></label>
+                <label>Display Name<input name="name" placeholder="Weather Server"></label>
+                <label>Base URL<input name="baseUrl" placeholder="https://weather.example.com/mcp"></label>
+                <label>Transport
+                    <select name="transportType">
+                        <option value="HTTP">HTTP</option>
+                        <option value="SSE">SSE</option>
+                    </select>
+                </label>
+                <label>Auth Mode<input name="authMode" value="API_KEY"></label>
+                <label>Timeout (ms)<input name="timeoutMs" type="number" value="3000"></label>
+                <label class="checkbox-row"><input name="enabled" type="checkbox" checked> Enabled</label>
+                <button type="submit" class="primary-button wide">Register upstream</button>
+            </form>
+            <div id="upstreamList" class="table-card"></div>
+        </article>
+
+        <article class="panel">
+            <div class="panel-header">
+                <div>
+                    <p class="panel-kicker">Admin</p>
+                    <h2>Tool Catalog</h2>
+                </div>
+                <button id="loadTools" class="ghost-button">Reload</button>
+            </div>
+            <form id="toolForm" class="grid-form">
+                <label>Server Code<input name="serverCode" placeholder="weather"></label>
+                <label>Tool Name<input name="toolName" placeholder="forecast"></label>
+                <label class="wide">Description<input name="description" placeholder="Return mock forecast details"></label>
+                <label class="wide">Input Schema<textarea name="inputSchema" rows="4">{ "city": "string" }</textarea></label>
+                <label class="checkbox-row"><input name="enabled" type="checkbox" checked> Enabled</label>
+                <button type="submit" class="primary-button wide">Register tool</button>
+            </form>
+            <div id="toolList" class="table-card"></div>
+        </article>
+    </section>
+
+    <section class="grid two-col">
+        <article class="panel">
+            <div class="panel-header">
+                <div>
+                    <p class="panel-kicker">Admin</p>
+                    <h2>Access Policies</h2>
+                </div>
+                <button id="loadPolicies" class="ghost-button">Reload</button>
+            </div>
+            <form id="policyForm" class="grid-form">
+                <label>Subject Type
+                    <select name="subjectType">
+                        <option value="CLIENT">CLIENT</option>
+                        <option value="ROLE">ROLE</option>
+                    </select>
+                </label>
+                <label>Subject Id<input name="subjectId" placeholder="demo-app or APP"></label>
+                <label>Tool Identifier<input name="toolIdentifier" placeholder="weather:forecast"></label>
+                <label>Decision
+                    <select name="decision">
+                        <option value="ALLOW">ALLOW</option>
+                        <option value="DENY">DENY</option>
+                    </select>
+                </label>
+                <label class="wide">Reason<input name="reason" placeholder="Allow only demo app"></label>
+                <label class="checkbox-row"><input name="enabled" type="checkbox" checked> Enabled</label>
+                <button type="submit" class="primary-button wide">Save policy</button>
+            </form>
+            <div id="policyList" class="table-card"></div>
+        </article>
+
+        <article class="panel">
+            <div class="panel-header">
+                <div>
+                    <p class="panel-kicker">Gateway</p>
+                    <h2>Discovery and Invocation</h2>
+                </div>
+                <button id="loadDiscovery" class="ghost-button">Refresh tools</button>
+            </div>
+            <div id="discoveryList" class="list-card"></div>
+            <form id="invokeForm" class="stack invoke-form">
+                <label>Tool Identifier<input name="toolIdentifier" placeholder="weather:forecast"></label>
+                <label>Arguments JSON<textarea name="arguments" rows="6">{ "city": "Shanghai", "days": 2 }</textarea></label>
+                <button type="submit" class="primary-button">Invoke tool</button>
+            </form>
+            <pre id="invokeResult" class="code-card">Invocation result will appear here.</pre>
+        </article>
+    </section>
+
+    <section class="status-strip">
+        <div>
+            <span>Status</span>
+            <strong id="statusText">Ready</strong>
+        </div>
+        <div>
+            <span>Last Request</span>
+            <strong id="requestText">-</strong>
+        </div>
+    </section>
+</main>
+
+<script src="/assets/app.js"></script>
+</body>
+</html>

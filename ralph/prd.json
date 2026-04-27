@@ -1,0 +1,217 @@
+{
+  "project": "MCP Gateway",
+  "branchName": "ralph/mcp-gateway",
+  "description": "Unified MCP gateway for registering upstream servers, authenticating clients, discovering tools, enforcing tool access policies, and routing tool calls through a single managed endpoint.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add upstream server configuration model",
+      "description": "As a platform administrator, I want a persistent model for upstream MCP server definitions so that the gateway can manage server metadata consistently.",
+      "acceptanceCriteria": [
+        "Add upstream server configuration entity or aggregate with fields: serverCode, name, baseUrl, transportType, authMode, enabled, timeoutMs, environment",
+        "Add repository port and infrastructure persistence model for create, update, list, enable, and disable operations",
+        "Duplicate serverCode within the same environment is rejected by the domain or application layer",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Expose admin API for upstream server lifecycle",
+      "description": "As a platform administrator, I want admin endpoints to register and manage upstream MCP servers so that I can maintain gateway connectivity without code changes.",
+      "acceptanceCriteria": [
+        "Add admin endpoints or commands for create, update, enable, disable, and list upstream server configurations",
+        "Validate required fields and reject invalid baseUrl or unsupported transportType values",
+        "Create and update responses return the persisted serverCode and enabled state",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Add client credential authentication",
+      "description": "As an AI application developer, I want to authenticate with a single gateway credential so that I do not manage separate credentials for each upstream server.",
+      "acceptanceCriteria": [
+        "Support API Key and Bearer Token authentication at gateway entry points",
+        "Missing or invalid credentials return a standardized 401 or 403 response",
+        "Unauthenticated requests do not reach downstream application handlers",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Bootstrap request context and session identifiers",
+      "description": "As a gateway operator, I want each request to carry a normalized context so that logs, errors, and downstream actions can be correlated reliably.",
+      "acceptanceCriteria": [
+        "Generate a unique requestId for every inbound request",
+        "Populate authenticated clientId and sessionId into a request context object after authentication succeeds",
+        "Include requestId in standardized error responses and request-scoped logs",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Add tool access policy model",
+      "description": "As a platform administrator, I want a persistent model for tool access policies so that tool permissions can be managed per client or client group.",
+      "acceptanceCriteria": [
+        "Add policy model with subject type, subject id, tool identifier, decision, enabled flag, and optional reason fields",
+        "Add repository port and persistence operations for create, update, list, and disable policy records",
+        "Policy records support whitelist and blacklist decisions",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Evaluate tool access policy before invocation",
+      "description": "As a platform administrator, I want the gateway to evaluate tool access policies before calling an upstream server so that restricted tools are blocked at the edge.",
+      "acceptanceCriteria": [
+        "Evaluate whitelist or blacklist policy for the authenticated client or client group before route execution",
+        "Denied requests return a standardized forbidden response with an auditable deny reason",
+        "Policy changes take effect for new requests without restarting the service",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Implement upstream health check service",
+      "description": "As a platform administrator, I want to track upstream server health so that unhealthy servers are excluded from new routing decisions.",
+      "acceptanceCriteria": [
+        "Add health check application service that probes each enabled upstream server",
+        "Store or expose healthStatus and lastCheckedAt for each upstream server",
+        "Servers marked unhealthy are excluded from new route candidates",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Fetch tool catalog from one upstream server",
+      "description": "As a gateway developer, I want an adapter that reads tool metadata from one upstream MCP server so that the gateway can build a unified catalog.",
+      "acceptanceCriteria": [
+        "Add an upstream adapter that fetches toolName, description, inputSchema, and serverCode from one healthy upstream server",
+        "Disabled, unhealthy, or unreachable upstream servers are skipped instead of producing a successful catalog entry",
+        "Tool identifiers preserve source uniqueness by combining serverCode with toolName",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Expose aggregated tool discovery endpoint",
+      "description": "As an AI application developer, I want one endpoint that returns all available tools so that I can discover capabilities without querying each upstream server separately.",
+      "acceptanceCriteria": [
+        "Add a gateway discovery endpoint that returns the merged tool list from enabled and healthy upstream servers",
+        "Each returned tool includes toolName, serverCode, description, and inputSchema",
+        "Tools from unavailable upstream servers do not appear in the response",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Add tool route selection service",
+      "description": "As a gateway developer, I want a route selector for tool requests so that each tool call resolves to the correct upstream server deterministically.",
+      "acceptanceCriteria": [
+        "Add route selection logic based on explicit tool identifier or configured binding between tool and upstream server",
+        "Unknown or ambiguous tool identifiers return a standardized not found or conflict response before upstream invocation",
+        "Route selection only considers enabled and healthy upstream servers",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Implement upstream tool invocation adapter",
+      "description": "As a gateway developer, I want an adapter that forwards tool calls to an upstream MCP server so that execution can happen behind a consistent gateway contract.",
+      "acceptanceCriteria": [
+        "Forward normalized tool invocation payloads to the selected upstream server",
+        "Map upstream success, timeout, 4xx, 5xx, and protocol errors into a standardized gateway response model",
+        "Pass through required tool arguments without dropping defined input fields",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Add gateway tool invocation flow",
+      "description": "As an AI application developer, I want to call a tool through one gateway endpoint so that authentication, policy checks, routing, and invocation happen in a single request flow.",
+      "acceptanceCriteria": [
+        "Add a gateway tool invocation endpoint or command handler that runs authentication, request context setup, access policy evaluation, route selection, and upstream invocation in order",
+        "Requests stop at the failing stage and do not proceed to later stages after authentication, policy, or route errors",
+        "Successful and failed responses include requestId and use the standardized gateway response model",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Record audit logs for tool calls",
+      "description": "As a platform administrator, I want audit logs for tool calls so that I can trace client behavior, routing decisions, and failures.",
+      "acceptanceCriteria": [
+        "Log requestId, clientId, toolName, serverCode, latency, and final status for every tool invocation attempt",
+        "Denied requests and upstream failures are logged with the same correlation fields",
+        "Audit log records are emitted from the gateway invocation flow without changing the external response contract",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Expose admin upstream status and refresh actions",
+      "description": "As a platform administrator, I want to query upstream status and trigger refresh actions so that I can diagnose and recover server availability quickly.",
+      "acceptanceCriteria": [
+        "Add an admin status endpoint that returns serverCode, enabled, healthStatus, and lastCheckedAt for all upstream servers",
+        "Add an admin action to trigger health refresh for one upstream server or all enabled upstream servers",
+        "Status results reflect the most recent completed health check execution",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
