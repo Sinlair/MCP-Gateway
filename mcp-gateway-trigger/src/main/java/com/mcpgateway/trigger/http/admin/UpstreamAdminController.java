@@ -1,9 +1,11 @@
 package com.mcpgateway.trigger.http.admin;
 
 import com.mcpgateway.domain.upstream.service.UpstreamRegistrationService;
+import com.mcpgateway.trigger.http.RequestSupport;
 import com.mcpgateway.trigger.http.admin.dto.UpstreamRegistrationRequest;
 import com.mcpgateway.trigger.http.admin.dto.UpstreamServerResponse;
 import com.mcpgateway.types.response.Result;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,14 +26,22 @@ public class UpstreamAdminController {
     }
 
     @PostMapping
-    public Result<UpstreamServerResponse> register(@RequestBody UpstreamRegistrationRequest request) {
+    public Result<UpstreamServerResponse> register(
+            @RequestBody UpstreamRegistrationRequest request,
+            HttpServletRequest servletRequest
+    ) {
+        RequestSupport.requireAnyScope(servletRequest, "upstream:manage");
+        RequestSupport.requireEnvironment(servletRequest, request.environment());
         return Result.success(UpstreamServerResponse.from(upstreamRegistrationService.register(request.toCommand())));
     }
 
     @GetMapping
     public Result<List<UpstreamServerResponse>> list(
-            @RequestParam(defaultValue = "dev") String environment
+            @RequestParam(defaultValue = "dev") String environment,
+            HttpServletRequest servletRequest
     ) {
+        RequestSupport.requireAnyScope(servletRequest, "upstream:manage");
+        RequestSupport.requireEnvironment(servletRequest, environment);
         return Result.success(upstreamRegistrationService.listByEnvironment(environment).stream()
                 .map(UpstreamServerResponse::from)
                 .toList());
@@ -40,11 +50,13 @@ public class UpstreamAdminController {
     @PostMapping("/{serverCode}/refresh")
     public Result<UpstreamServerResponse> refresh(
             @PathVariable String serverCode,
-            @RequestParam(defaultValue = "dev") String environment
+            @RequestParam(defaultValue = "dev") String environment,
+            HttpServletRequest servletRequest
     ) {
+        RequestSupport.requireAnyScope(servletRequest, "upstream:manage");
+        RequestSupport.requireEnvironment(servletRequest, environment);
         return Result.success(UpstreamServerResponse.from(
                 upstreamRegistrationService.refreshStatus(environment, serverCode)
         ));
     }
 }
-

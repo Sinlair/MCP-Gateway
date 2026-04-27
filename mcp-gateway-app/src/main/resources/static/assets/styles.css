@@ -293,6 +293,13 @@ body::before {
     opacity: 0.98;
 }
 
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.48;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
 .token-line {
     display: inline-block;
     margin: 10px 0 12px;

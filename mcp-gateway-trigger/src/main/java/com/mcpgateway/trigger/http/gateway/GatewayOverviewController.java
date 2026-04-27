@@ -34,6 +34,8 @@ public class GatewayOverviewController {
             @RequestParam(defaultValue = "dev") String environment,
             HttpServletRequest request
     ) {
+        RequestSupport.requireAnyScope(request, "console:read");
+        RequestSupport.requireEnvironment(request, environment);
         GatewayClient client = RequestSupport.requiredClient(request);
         List<UpstreamServerResponse> enabledServers = upstreamRegistrationService.listEnabledByEnvironment(environment)
                 .stream()

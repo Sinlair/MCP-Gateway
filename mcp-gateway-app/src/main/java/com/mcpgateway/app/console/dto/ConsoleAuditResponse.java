@@ -3,13 +3,16 @@ package com.mcpgateway.app.console.dto;
 import java.time.Instant;
 import java.util.List;
 
-public record ConsoleSessionResponse(
+public record ConsoleAuditResponse(
+        String eventId,
+        String eventType,
         String tokenId,
         String profile,
         String environment,
-        Instant issuedAt,
-        Instant expiresAt,
-        List<String> roles,
+        String requestPath,
+        String outcome,
+        String message,
+        Instant occurredAt,
         List<String> scopes,
         List<String> managedSystems
 ) {

@@ -5,6 +5,7 @@ import com.mcpgateway.app.console.ConsoleTokenService;
 import com.mcpgateway.app.console.ConsoleTokenSession;
 import com.mcpgateway.domain.security.model.GatewayClient;
 import com.mcpgateway.domain.security.service.ClientAuthenticationService;
+import com.mcpgateway.trigger.http.RequestSupport;
 import com.mcpgateway.types.context.GatewayRequestContext;
 import com.mcpgateway.types.context.RequestAttributeNames;
 import com.mcpgateway.types.context.ResponseContext;
@@ -60,7 +61,8 @@ public class GatewayRequestFilter extends OncePerRequestFilter {
         response.setHeader("X-Session-Id", sessionId);
         try {
             GatewayClient client = authenticate(request);
-            if (request.getRequestURI().startsWith("/api/v1/admin/")) {
+            if (request.getRequestURI().startsWith("/api/v1/admin/")
+                    && !RequestSupport.hasConsoleToken(request)) {
                 clientAuthenticationService.requireAdmin(client);
             }
             GatewayRequestContext requestContext = new GatewayRequestContext(requestId, sessionId, client.clientId());
@@ -83,12 +85,17 @@ public class GatewayRequestFilter extends OncePerRequestFilter {
         if (isBlank(apiKey) && isBlank(bearerToken)) {
             throw new AppException(ResponseCode.UNAUTHORIZED, "missing credentials");
         }
-        if (!isBlank(bearerToken)) {
-            java.util.Optional<ConsoleTokenSession> consoleSession = consoleTokenService.resolve(bearerToken);
-            if (consoleSession.isPresent()) {
-                request.setAttribute(RequestAttributeNames.CONSOLE_TOKEN_SESSION, consoleSession.get());
-                return consoleSession.get().gatewayClient();
-            }
+        if (!isBlank(bearerToken) && consoleTokenService.looksLikeConsoleToken(bearerToken)) {
+            ConsoleTokenSession consoleSession = consoleTokenService.authenticateConsoleToken(
+                    bearerToken,
+                    request.getRequestURI()
+            );
+            request.setAttribute(RequestAttributeNames.CONSOLE_TOKEN_SESSION, consoleSession);
+            request.setAttribute(RequestAttributeNames.CONSOLE_TOKEN_ID, consoleSession.tokenId());
+            request.setAttribute(RequestAttributeNames.CONSOLE_TOKEN_ENVIRONMENT, consoleSession.environment());
+            request.setAttribute(RequestAttributeNames.CONSOLE_TOKEN_SCOPES, consoleSession.scopes());
+            request.setAttribute(RequestAttributeNames.CONSOLE_TOKEN_MANAGED_SYSTEMS, consoleSession.managedSystems());
+            return consoleSession.gatewayClient();
         }
         return clientAuthenticationService.authenticate(apiKey, bearerToken);
     }

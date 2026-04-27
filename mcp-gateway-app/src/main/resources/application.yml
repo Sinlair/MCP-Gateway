@@ -21,3 +21,12 @@ managed-systems:
     repo-path: "E:\\Internship\\program\\big-market-71772-z"
     base-url: "http://127.0.0.1:8091"
     api-version: v1
+
+mcp:
+  console:
+    token:
+      issuer: mcp-gateway
+      secret: local-dev-console-token-secret-change-me
+      ttl-hours: 12
+      clock-skew-seconds: 30
+      audit-retention: 200

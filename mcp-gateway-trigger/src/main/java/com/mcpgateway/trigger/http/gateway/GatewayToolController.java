@@ -33,6 +33,8 @@ public class GatewayToolController {
             @RequestParam(defaultValue = "dev") String environment,
             HttpServletRequest request
     ) {
+        RequestSupport.requireAnyScope(request, "console:read");
+        RequestSupport.requireEnvironment(request, environment);
         GatewayClient client = RequestSupport.requiredClient(request);
         return Result.success(gatewayToolService.discover(environment, client).stream()
                 .map(ToolDefinitionResponse::from)
@@ -44,6 +46,8 @@ public class GatewayToolController {
             @RequestBody ToolInvocationRequest requestBody,
             HttpServletRequest request
     ) {
+        RequestSupport.requireAnyScope(request, "gateway:invoke");
+        RequestSupport.requireEnvironment(request, requestBody.environment());
         GatewayClient client = RequestSupport.requiredClient(request);
         GatewayRequestContext requestContext = RequestSupport.requiredContext(request);
         ToolInvocationResult result = gatewayToolService.invoke(
@@ -55,4 +59,3 @@ public class GatewayToolController {
         return Result.success(ToolInvocationResponse.from(result));
     }
 }
-

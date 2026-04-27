@@ -47,6 +47,16 @@ const table = (columns, rows, emptyTitle, emptyDetail) => {
 const isAdminSession = () =>
   Boolean(state.session && Array.isArray(state.session.roles) && state.session.roles.includes("ADMIN"));
 
+const hasScope = (scope) =>
+  Boolean(state.session && Array.isArray(state.session.scopes) && state.session.scopes.includes(scope));
+
+const managesSystem = (systemName) =>
+  Boolean(
+    state.session &&
+      Array.isArray(state.session.managedSystems) &&
+      state.session.managedSystems.includes(systemName)
+  );
+
 const currentProfile = () => (state.session?.profile ? state.session.profile : "未认证");
 
 const setStatus = (message, requestId = "-") => {
@@ -132,7 +142,10 @@ const syncSessionIdentity = () => {
   $("#activeExpiresAt").textContent = new Date(state.session.expiresAt).toLocaleString("zh-CN");
   $("#tokenContextPanel").innerHTML = [
     ["访问画像", state.session.profile, "当前控制台令牌绑定的调用方身份"],
+    ["令牌编号", state.session.tokenId, "可用于撤销、审计和问题排查"],
     ["权限角色", state.session.roles.join(", "), "决定可访问模块与动作范围"],
+    ["权限范围", state.session.scopes.join(", "), "基于 scope 控制模块与动作能力"],
+    ["系统范围", state.session.managedSystems.join(", "), "当前令牌允许访问的受管系统"],
     ["令牌环境", state.session.environment, "控制台默认作用的网关环境"],
     ["过期时间", new Date(state.session.expiresAt).toLocaleString("zh-CN"), "令牌过期后需要重新签发"],
   ]
@@ -145,6 +158,29 @@ const syncSessionIdentity = () => {
         </div>`
     )
     .join("");
+};
+
+const updateActionPermissions = () => {
+  const canOperateBigMarket =
+    hasScope("system:big-market:operate") && managesSystem("big-market-71772-z");
+  [
+    "#bmActivityArmory",
+    "#bmStrategyArmory",
+    "#bmAwardList",
+    "#bmUserAccount",
+    "#bmDraw",
+  ].forEach((selector) => {
+    const button = $(selector);
+    if (!button) {
+      return;
+    }
+    const needsOperate = selector === "#bmActivityArmory" || selector === "#bmStrategyArmory" || selector === "#bmDraw";
+    const enabled = needsOperate
+      ? canOperateBigMarket
+      : hasScope("system:big-market:read") && managesSystem("big-market-71772-z");
+    button.disabled = !enabled;
+    button.title = enabled ? "" : "当前令牌没有这个操作权限";
+  });
 };
 
 const parseApiPayload = async (response) => {
@@ -483,14 +519,42 @@ const submitJson = async (path, body) =>
   });
 
 const loadAdminSurfaces = async () => {
-  await Promise.all([loadUpstreams(), loadTools(), loadPolicies(), loadBigMarketOverview()]);
+  const tasks = [];
+  if (hasScope("upstream:manage")) {
+    tasks.push(loadUpstreams());
+  } else {
+    $("#upstreamList").innerHTML = emptyState("缺少 upstream:manage", "当前令牌没有上游资源管理权限。");
+  }
+  if (hasScope("tools:manage")) {
+    tasks.push(loadTools());
+  } else {
+    $("#toolList").innerHTML = emptyState("缺少 tools:manage", "当前令牌没有工具目录管理权限。");
+  }
+  if (hasScope("policies:manage")) {
+    tasks.push(loadPolicies());
+  } else {
+    $("#policyList").innerHTML = emptyState("缺少 policies:manage", "当前令牌没有策略管理权限。");
+  }
+  if (hasScope("system:big-market:read") && managesSystem("big-market-71772-z")) {
+    tasks.push(loadBigMarketOverview());
+  } else {
+    $("#bigMarketOverview").innerHTML = emptyState(
+      "缺少系统读取权限",
+      "当前令牌没有 big-market-71772-z 的读取范围。"
+    );
+    $("#bigMarketResult").textContent = "当前令牌没有 big-market 控制权限。";
+  }
+  await Promise.all(tasks);
 };
 
 const renderAdminLockedStates = () => {
-  $("#upstreamList").innerHTML = emptyState("需要管理员令牌", "切换到管理员令牌后才能管理上游。");
-  $("#toolList").innerHTML = emptyState("需要管理员令牌", "切换到管理员令牌后才能管理工具。");
-  $("#policyList").innerHTML = emptyState("需要管理员令牌", "切换到管理员令牌后才能管理策略。");
-  $("#bigMarketOverview").innerHTML = emptyState("需要管理员令牌", "切换到管理员令牌后才能控制 big-market。");
+  $("#upstreamList").innerHTML = emptyState("缺少 upstream:manage", "当前令牌没有上游资源管理权限。");
+  $("#toolList").innerHTML = emptyState("缺少 tools:manage", "当前令牌没有工具目录管理权限。");
+  $("#policyList").innerHTML = emptyState("缺少 policies:manage", "当前令牌没有策略管理权限。");
+  $("#bigMarketOverview").innerHTML = emptyState(
+    "缺少系统读取权限",
+    "当前令牌没有 big-market-71772-z 的读取范围。"
+  );
   $("#bigMarketResult").textContent = "当前令牌没有 big-market 控制权限。";
 };
 
@@ -498,9 +562,10 @@ const refreshAll = async () => {
   try {
     await loadSession();
     syncSessionIdentity();
+    updateActionPermissions();
     showConsole();
     await loadOverview();
-    if (isAdminSession()) {
+    if (hasScope("upstream:manage") || hasScope("tools:manage") || hasScope("policies:manage") || hasScope("system:big-market:read")) {
       await loadAdminSurfaces();
     } else {
       renderAdminLockedStates();
@@ -574,12 +639,25 @@ $("#switchAppTokenButton").addEventListener("click", async () => {
 });
 
 $("#logoutTokenButton").addEventListener("click", () => {
-  clearToken();
-  showGate();
-  $("#gateTokenInput").value = "";
-  setGateMessage("令牌已清除，请重新输入或重新签发访问令牌。", "warn");
-  $("#bigMarketResult").textContent = "big-market 操作结果会显示在这里。";
-  $("#invokeResult").textContent = "工具调用结果会显示在这里。";
+  (async () => {
+    try {
+      if (state.accessToken) {
+        await api("/api/v1/console/tokens/revoke", {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
+      }
+    } catch (error) {
+      logActivity("令牌撤销失败", error.message, "error");
+    } finally {
+      clearToken();
+      showGate();
+      $("#gateTokenInput").value = "";
+      setGateMessage("令牌已撤销，请重新输入或重新签发访问令牌。", "warn");
+      $("#bigMarketResult").textContent = "big-market 操作结果会显示在这里。";
+      $("#invokeResult").textContent = "工具调用结果会显示在这里。";
+    }
+  })();
 });
 
 $("#refreshOverview").addEventListener("click", loadOverview);

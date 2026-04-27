@@ -5,8 +5,11 @@ import java.time.Instant;
 
 public record ConsoleTokenSession(
         String accessToken,
+        String tokenId,
         GatewayClient gatewayClient,
         String environment,
+        java.util.List<String> scopes,
+        java.util.List<String> managedSystems,
         Instant issuedAt,
         Instant expiresAt
 ) {
@@ -14,5 +17,12 @@ public record ConsoleTokenSession(
     public boolean expired(Instant now) {
         return expiresAt.isBefore(now);
     }
-}
 
+    public boolean hasScope(String scope) {
+        return scopes.contains(scope);
+    }
+
+    public boolean managesSystem(String systemName) {
+        return managedSystems.contains(systemName);
+    }
+}

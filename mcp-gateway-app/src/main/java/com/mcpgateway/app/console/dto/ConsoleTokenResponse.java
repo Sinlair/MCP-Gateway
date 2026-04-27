@@ -6,11 +6,13 @@ import java.util.List;
 public record ConsoleTokenResponse(
         String accessToken,
         String tokenType,
+        String tokenId,
         String profile,
         String environment,
         Instant issuedAt,
         Instant expiresAt,
-        List<String> roles
+        List<String> roles,
+        List<String> scopes,
+        List<String> managedSystems
 ) {
 }
-

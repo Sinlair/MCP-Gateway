@@ -1,11 +1,11 @@
-package com.mcpgateway.app.console.dto;
+package com.mcpgateway.app.console;
 
 import java.time.Instant;
 import java.util.List;
 
-public record ConsoleSessionResponse(
+public record ConsoleTokenClaims(
         String tokenId,
-        String profile,
+        String subject,
         String environment,
         Instant issuedAt,
         Instant expiresAt,

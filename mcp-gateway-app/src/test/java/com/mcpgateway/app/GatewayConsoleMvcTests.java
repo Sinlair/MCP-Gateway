@@ -149,11 +149,14 @@ class GatewayConsoleMvcTests {
                         .content("""
                                 {
                                   "profile":"demo-admin",
-                                  "environment":"dev"
+                                  "environment":"dev",
+                                  "managedSystems":["big-market-71772-z"]
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.data.tokenId").isNotEmpty())
+                .andExpect(jsonPath("$.data.scopes.length()").value(8))
                 .andReturn();
 
         JsonNode issuePayload = objectMapper.readTree(issueResult.getResponse().getContentAsString());
@@ -163,11 +166,29 @@ class GatewayConsoleMvcTests {
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.profile").value("demo-admin"))
-                .andExpect(jsonPath("$.data.environment").value("dev"));
+                .andExpect(jsonPath("$.data.environment").value("dev"))
+                .andExpect(jsonPath("$.data.managedSystems[0]").value("big-market-71772-z"));
 
         mockMvc.perform(get("/api/v1/admin/systems/big-market")
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.systemName").value("big-market-71772-z"));
+
+        mockMvc.perform(get("/api/v1/admin/console/audits")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].eventType").isNotEmpty());
+
+        mockMvc.perform(post("/api/v1/console/tokens/revoke")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value(true));
+
+        mockMvc.perform(get("/api/v1/console/session")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("A0401"));
     }
 }
