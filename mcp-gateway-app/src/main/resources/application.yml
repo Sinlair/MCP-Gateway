@@ -15,3 +15,9 @@ management:
       probes:
         enabled: true
 
+managed-systems:
+  big-market:
+    name: big-market-71772-z
+    repo-path: "E:\\Internship\\program\\big-market-71772-z"
+    base-url: "http://127.0.0.1:8091"
+    api-version: v1

@@ -124,4 +124,15 @@ class GatewayConsoleMvcTests {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("A0403"));
     }
+
+    @Test
+    void shouldExposeBigMarketManagedSystemOverview() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/systems/big-market")
+                        .header("X-API-Key", "demo-admin-key"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.systemName").value("big-market-71772-z"))
+                .andExpect(jsonPath("$.data.repoPath").value("E:\\Internship\\program\\big-market-71772-z"))
+                .andExpect(jsonPath("$.data.baseUrl").value("http://127.0.0.1:8091"))
+                .andExpect(jsonPath("$.data.supportedOperations.length()").value(5));
+    }
 }

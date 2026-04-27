@@ -1,85 +1,85 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCP Gateway Admin Console</title>
+    <title>MCP 网关监控控制台</title>
     <link rel="stylesheet" href="/assets/styles.css">
 </head>
 <body>
-<div class="app-shell">
-    <aside class="sidebar">
-        <div class="brand">
-            <div class="brand-mark">MG</div>
+<div class="console-shell">
+    <aside class="ops-rail">
+        <div class="rail-brand">
+            <div class="brand-badge">MG</div>
             <div>
-                <p class="brand-kicker">Gateway Control</p>
-                <h1>MCP Admin</h1>
+                <p class="eyebrow">可观测控制台</p>
+                <h1>MCP 网关</h1>
             </div>
         </div>
 
-        <nav class="nav-group">
-            <a href="#overview" class="nav-link">Overview</a>
-            <a href="#registry" class="nav-link">Upstreams</a>
-            <a href="#catalog" class="nav-link">Tools</a>
-            <a href="#policies" class="nav-link">Policies</a>
-            <a href="#lab" class="nav-link">Invocation Lab</a>
+        <nav class="rail-nav">
+            <a href="#overview" class="rail-link">总览</a>
+            <a href="#managed-system" class="rail-link">受管系统</a>
+            <a href="#resources" class="rail-link">上游资源</a>
+            <a href="#catalog" class="rail-link">工具目录</a>
+            <a href="#access" class="rail-link">访问控制</a>
         </nav>
 
-        <section class="sidebar-card">
-            <p class="card-kicker">Profiles</p>
-            <h2>Demo Access</h2>
-            <button id="useAdmin" class="profile-button profile-button-primary" type="button">
-                <span>Use Demo Admin</span>
-                <small>Manage upstreams, tools, policies, and calls</small>
+        <section class="rail-card">
+            <p class="eyebrow">身份预设</p>
+            <h2>调用方切换</h2>
+            <button id="useAdmin" class="rail-button rail-button-primary" type="button">
+                <span>演示管理员</span>
+                <small>控制面 + 运行面全部开放</small>
             </button>
-            <button id="useApp" class="profile-button" type="button">
-                <span>Use Demo Caller</span>
-                <small>View discoverable tools and invoke only</small>
+            <button id="useApp" class="rail-button" type="button">
+                <span>演示调用方</span>
+                <small>只保留发现与调用能力</small>
             </button>
         </section>
 
-        <section class="sidebar-card">
-            <p class="card-kicker">Active Context</p>
+        <section class="rail-card">
+            <p class="eyebrow">当前上下文</p>
             <h2 id="activeProfile">demo-admin</h2>
-            <code id="activeCredential" class="token">demo-admin-key</code>
-            <div class="meta-grid">
+            <code id="activeCredential" class="token-line">demo-admin-key</code>
+            <div class="rail-meta">
                 <div>
-                    <span>Mode</span>
+                    <span>认证方式</span>
                     <strong id="activeAuthMode">API Key</strong>
                 </div>
                 <div>
-                    <span>Environment</span>
+                    <span>环境</span>
                     <strong id="activeEnvironment">dev</strong>
                 </div>
             </div>
         </section>
 
-        <section class="sidebar-note">
-            <p class="card-kicker">Note</p>
+        <section class="rail-note">
+            <p class="eyebrow">说明</p>
             <p>
-                This is the website admin console. The “caller” model below refers to gateway credentials,
-                not a desktop client.
+                这里的“调用方”是网关凭证身份，不是桌面客户端。这个页面本身就是中文网站后台，
+                同时承担监控控制台与系统操作面板。
             </p>
         </section>
     </aside>
 
     <main class="workspace">
-        <header class="topbar">
+        <header class="masthead">
             <div>
-                <p class="page-kicker">Admin Console</p>
-                <h2>Operate routing, governance, and execution from one control plane</h2>
-                <p class="page-copy">
-                    Register upstream MCP services, publish tool metadata, enforce caller policies,
-                    and validate tool invocation flow without leaving this dashboard.
+                <p class="eyebrow accent">MCP 网关监控控制台</p>
+                <h2>监控路由健康、治理工具暴露，并直接控制 big-market 系统</h2>
+                <p class="masthead-copy">
+                    这个控制台同时覆盖网关运行态和业务系统控制面：上游服务、调用策略、工具发现、调用实验室，
+                    以及 `big-market-71772-z` 的活动装配、策略装配、奖品查询、账户查询和抽奖操作。
                 </p>
             </div>
-            <div class="status-stack">
-                <div class="status-card">
-                    <span>System</span>
-                    <strong id="statusText">Ready</strong>
+            <div class="masthead-status">
+                <div class="signal-card">
+                    <span>系统状态</span>
+                    <strong id="statusText">就绪</strong>
                 </div>
-                <div class="status-card">
-                    <span>Last Request</span>
+                <div class="signal-card">
+                    <span>最近请求</span>
                     <strong id="requestText">-</strong>
                 </div>
             </div>
@@ -88,233 +88,300 @@
         <section id="overview" class="surface">
             <div class="surface-head">
                 <div>
-                    <p class="section-kicker">Overview</p>
-                    <h3>Runtime Snapshot</h3>
+                    <p class="eyebrow accent">运行总览</p>
+                    <h3>网关实时快照</h3>
                 </div>
-                <button id="refreshOverview" class="secondary-button" type="button">Refresh snapshot</button>
+                <button id="refreshOverview" class="secondary-button" type="button">刷新总览</button>
             </div>
 
             <div id="overviewCards" class="metric-grid"></div>
 
             <div class="overview-grid">
-                <article class="subsurface">
-                    <div class="subsurface-head">
+                <article class="panel">
+                    <div class="panel-head">
                         <div>
-                            <p class="section-kicker">Context</p>
-                            <h4>Caller Configuration</h4>
+                            <p class="eyebrow accent">监控信号</p>
+                            <h4>派生指标</h4>
+                        </div>
+                    </div>
+                    <div id="overviewSignals" class="signal-stack"></div>
+                </article>
+
+                <article class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <p class="eyebrow accent">事件流</p>
+                            <h4>操作与告警</h4>
+                        </div>
+                    </div>
+                    <div id="activityFeed" class="activity-feed"></div>
+                </article>
+            </div>
+
+            <div class="overview-grid">
+                <article class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <p class="eyebrow accent">会话上下文</p>
+                            <h4>网关调用身份</h4>
                         </div>
                     </div>
                     <form id="authForm" class="form-grid compact-grid">
                         <label class="field">
-                            <span>Environment</span>
+                            <span>环境</span>
                             <input id="environment" name="environment" value="dev">
                         </label>
                         <label class="field">
-                            <span>Auth Mode</span>
+                            <span>认证方式</span>
                             <select id="authModeSelect" name="authModeSelect">
                                 <option value="apiKey">API Key</option>
                                 <option value="bearer">Bearer Token</option>
                             </select>
                         </label>
                         <label class="field field-wide">
-                            <span>Credential</span>
+                            <span>凭证</span>
                             <input id="credential" name="credential" value="demo-admin-key">
                         </label>
                         <label class="field field-wide">
-                            <span>Session Id</span>
-                            <input id="sessionId" name="sessionId" placeholder="optional session id">
+                            <span>会话 ID</span>
+                            <input id="sessionId" name="sessionId" placeholder="可选，用于链路追踪">
                         </label>
-                        <button type="submit" class="primary-button field-wide">Apply caller context</button>
+                        <button type="submit" class="primary-button field-wide">应用调用方上下文</button>
                     </form>
                 </article>
 
-                <article class="subsurface">
-                    <div class="subsurface-head">
+                <article class="panel">
+                    <div class="panel-head">
                         <div>
-                            <p class="section-kicker">Health</p>
-                            <h4>Enabled Upstreams</h4>
+                            <p class="eyebrow accent">健康矩阵</p>
+                            <h4>已启用上游</h4>
                         </div>
                     </div>
-                    <div id="overviewServers" class="server-list"></div>
+                    <div id="overviewServers" class="health-grid"></div>
                 </article>
             </div>
         </section>
 
-        <section class="workspace-grid">
-            <article id="registry" class="surface">
-                <div class="surface-head">
-                    <div>
-                        <p class="section-kicker">Admin</p>
-                        <h3>Upstream Registry</h3>
-                    </div>
-                    <button id="loadUpstreams" class="secondary-button" type="button">Reload</button>
+        <section id="managed-system" class="surface">
+            <div class="surface-head">
+                <div>
+                    <p class="eyebrow accent">受管系统</p>
+                    <h3>big-market-71772-z 控制面</h3>
                 </div>
+                <button id="bmLoadOverview" class="secondary-button" type="button">刷新系统状态</button>
+            </div>
 
-                <div class="management-grid">
-                    <form id="upstreamForm" class="form-grid">
+            <div class="overview-grid">
+                <article class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <p class="eyebrow accent">系统信息</p>
+                            <h4>连接与能力</h4>
+                        </div>
+                    </div>
+                    <div id="bigMarketOverview" class="system-overview-grid"></div>
+                </article>
+
+                <article class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <p class="eyebrow accent">控制操作</p>
+                            <h4>业务接口代理</h4>
+                        </div>
+                    </div>
+                    <form id="bigMarketForm" class="form-grid compact-grid">
                         <label class="field">
-                            <span>Server Code</span>
-                            <input name="serverCode" placeholder="weather">
+                            <span>活动 ID</span>
+                            <input id="bmActivityId" value="100301">
                         </label>
                         <label class="field">
-                            <span>Display Name</span>
-                            <input name="name" placeholder="Weather Server">
+                            <span>策略 ID</span>
+                            <input id="bmStrategyId" value="100001">
                         </label>
                         <label class="field field-wide">
-                            <span>Base URL</span>
-                            <input name="baseUrl" placeholder="https://weather.example.com/mcp">
+                            <span>用户 ID</span>
+                            <input id="bmUserId" value="xiaofuge">
                         </label>
-                        <label class="field">
-                            <span>Transport</span>
-                            <select name="transportType">
-                                <option value="HTTP">HTTP</option>
-                                <option value="SSE">SSE</option>
-                            </select>
-                        </label>
-                        <label class="field">
-                            <span>Auth Mode</span>
-                            <input name="authMode" value="API_KEY">
-                        </label>
-                        <label class="field">
-                            <span>Timeout (ms)</span>
-                            <input name="timeoutMs" type="number" value="3000">
-                        </label>
-                        <label class="toggle-field">
-                            <input name="enabled" type="checkbox" checked>
-                            <span>Enabled on create</span>
-                        </label>
-                        <button type="submit" class="primary-button field-wide">Register upstream</button>
+                        <div class="action-button-grid field-wide">
+                            <button id="bmActivityArmory" type="button" class="secondary-button">活动装配</button>
+                            <button id="bmStrategyArmory" type="button" class="secondary-button">策略装配</button>
+                            <button id="bmAwardList" type="button" class="secondary-button">查询奖品列表</button>
+                            <button id="bmUserAccount" type="button" class="secondary-button">查询活动账户</button>
+                            <button id="bmDraw" type="button" class="primary-button">执行抽奖</button>
+                        </div>
                     </form>
-                    <div id="upstreamList" class="data-panel"></div>
-                </div>
-            </article>
+                    <pre id="bigMarketResult" class="result-console">big-market 操作结果会显示在这里。</pre>
+                </article>
+            </div>
+        </section>
 
-            <article id="catalog" class="surface">
+        <section id="resources" class="surface">
+            <div class="surface-head">
+                <div>
+                    <p class="eyebrow accent">上游资源</p>
+                    <h3>上游注册中心</h3>
+                </div>
+                <button id="loadUpstreams" class="secondary-button" type="button">刷新注册表</button>
+            </div>
+
+            <div class="management-grid">
+                <form id="upstreamForm" class="form-grid">
+                    <label class="field">
+                        <span>服务编码</span>
+                        <input name="serverCode" placeholder="weather">
+                    </label>
+                    <label class="field">
+                        <span>显示名称</span>
+                        <input name="name" placeholder="天气服务">
+                    </label>
+                    <label class="field field-wide">
+                        <span>基础地址</span>
+                        <input name="baseUrl" placeholder="https://weather.example.com/mcp">
+                    </label>
+                    <label class="field">
+                        <span>传输类型</span>
+                        <select name="transportType">
+                            <option value="HTTP">HTTP</option>
+                            <option value="SSE">SSE</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>认证模式</span>
+                        <input name="authMode" value="API_KEY">
+                    </label>
+                    <label class="field">
+                        <span>超时 (ms)</span>
+                        <input name="timeoutMs" type="number" value="3000">
+                    </label>
+                    <label class="toggle-field">
+                        <input name="enabled" type="checkbox" checked>
+                        <span>创建后立即启用</span>
+                    </label>
+                    <button type="submit" class="primary-button field-wide">注册上游服务</button>
+                </form>
+                <div id="upstreamList" class="data-panel"></div>
+            </div>
+        </section>
+
+        <section id="catalog" class="workspace-grid">
+            <article class="surface">
                 <div class="surface-head">
                     <div>
-                        <p class="section-kicker">Admin</p>
-                        <h3>Tool Catalog</h3>
+                        <p class="eyebrow accent">工具目录</p>
+                        <h3>工具定义</h3>
                     </div>
-                    <button id="loadTools" class="secondary-button" type="button">Reload</button>
+                    <button id="loadTools" class="secondary-button" type="button">刷新工具</button>
                 </div>
 
                 <div class="management-grid">
                     <form id="toolForm" class="form-grid">
                         <label class="field">
-                            <span>Server Code</span>
+                            <span>服务编码</span>
                             <input name="serverCode" placeholder="weather">
                         </label>
                         <label class="field">
-                            <span>Tool Name</span>
+                            <span>工具名称</span>
                             <input name="toolName" placeholder="forecast">
                         </label>
                         <label class="field field-wide">
-                            <span>Description</span>
-                            <input name="description" placeholder="Return mock forecast details">
+                            <span>描述</span>
+                            <input name="description" placeholder="返回模拟天气预测">
                         </label>
                         <label class="field field-wide">
-                            <span>Input Schema</span>
-                            <textarea name="inputSchema" rows="5">{ "city": "string" }</textarea>
+                            <span>输入模式</span>
+                            <textarea name="inputSchema" rows="6">{ "city": "string" }</textarea>
                         </label>
                         <label class="toggle-field">
                             <input name="enabled" type="checkbox" checked>
-                            <span>Enabled on create</span>
+                            <span>创建后立即启用</span>
                         </label>
-                        <button type="submit" class="primary-button field-wide">Register tool</button>
+                        <button type="submit" class="primary-button field-wide">注册工具</button>
                     </form>
                     <div id="toolList" class="data-panel"></div>
                 </div>
             </article>
-        </section>
 
-        <section class="workspace-grid">
-            <article id="policies" class="surface">
+            <article class="surface">
                 <div class="surface-head">
                     <div>
-                        <p class="section-kicker">Admin</p>
-                        <h3>Access Policies</h3>
+                        <p class="eyebrow accent">发现视图</p>
+                        <h3>当前调用方可见工具</h3>
                     </div>
-                    <button id="loadPolicies" class="secondary-button" type="button">Reload</button>
+                    <button id="loadDiscovery" class="secondary-button" type="button">刷新发现结果</button>
+                </div>
+                <div id="discoveryList" class="tool-grid"></div>
+            </article>
+        </section>
+
+        <section id="access" class="workspace-grid">
+            <article class="surface">
+                <div class="surface-head">
+                    <div>
+                        <p class="eyebrow accent">访问控制</p>
+                        <h3>策略矩阵</h3>
+                    </div>
+                    <button id="loadPolicies" class="secondary-button" type="button">刷新策略</button>
                 </div>
 
                 <div class="management-grid">
                     <form id="policyForm" class="form-grid">
                         <label class="field">
-                            <span>Subject Type</span>
+                            <span>主体类型</span>
                             <select name="subjectType">
                                 <option value="CLIENT">CLIENT</option>
                                 <option value="ROLE">ROLE</option>
                             </select>
                         </label>
                         <label class="field">
-                            <span>Subject Id</span>
-                            <input name="subjectId" placeholder="demo-app or APP">
+                            <span>主体标识</span>
+                            <input name="subjectId" placeholder="demo-app 或 APP">
                         </label>
                         <label class="field field-wide">
-                            <span>Tool Identifier</span>
+                            <span>工具标识</span>
                             <input name="toolIdentifier" placeholder="weather:forecast">
                         </label>
                         <label class="field">
-                            <span>Decision</span>
+                            <span>决策</span>
                             <select name="decision">
                                 <option value="ALLOW">ALLOW</option>
                                 <option value="DENY">DENY</option>
                             </select>
                         </label>
                         <label class="field">
-                            <span>Reason</span>
-                            <input name="reason" placeholder="Allow only demo app">
+                            <span>原因</span>
+                            <input name="reason" placeholder="仅允许演示调用方">
                         </label>
                         <label class="toggle-field">
                             <input name="enabled" type="checkbox" checked>
-                            <span>Enabled on save</span>
+                            <span>保存后立即生效</span>
                         </label>
-                        <button type="submit" class="primary-button field-wide">Save policy</button>
+                        <button type="submit" class="primary-button field-wide">保存策略</button>
                     </form>
                     <div id="policyList" class="data-panel"></div>
                 </div>
             </article>
 
-            <article id="lab" class="surface">
+            <article class="surface">
                 <div class="surface-head">
                     <div>
-                        <p class="section-kicker">Gateway</p>
-                        <h3>Invocation Lab</h3>
+                        <p class="eyebrow accent">调用实验室</p>
+                        <h3>工具调用</h3>
                     </div>
-                    <button id="loadDiscovery" class="secondary-button" type="button">Refresh tools</button>
                 </div>
 
                 <div class="lab-grid">
-                    <article class="subsurface">
-                        <div class="subsurface-head">
-                            <div>
-                                <p class="section-kicker">Discovery</p>
-                                <h4>Visible Tools</h4>
-                            </div>
-                        </div>
-                        <div id="discoveryList" class="tool-grid"></div>
-                    </article>
-
-                    <article class="subsurface">
-                        <div class="subsurface-head">
-                            <div>
-                                <p class="section-kicker">Execute</p>
-                                <h4>Invoke Tool</h4>
-                            </div>
-                        </div>
-                        <form id="invokeForm" class="form-grid">
-                            <label class="field field-wide">
-                                <span>Tool Identifier</span>
-                                <input name="toolIdentifier" placeholder="weather:forecast">
-                            </label>
-                            <label class="field field-wide">
-                                <span>Arguments JSON</span>
-                                <textarea name="arguments" rows="8">{ "city": "Shanghai", "days": 2 }</textarea>
-                            </label>
-                            <button type="submit" class="primary-button field-wide">Invoke tool</button>
-                        </form>
-                        <pre id="invokeResult" class="result-console">Invocation result will appear here.</pre>
-                    </article>
+                    <form id="invokeForm" class="form-grid">
+                        <label class="field field-wide">
+                            <span>工具标识</span>
+                            <input name="toolIdentifier" placeholder="weather:forecast">
+                        </label>
+                        <label class="field field-wide">
+                            <span>参数 JSON</span>
+                            <textarea name="arguments" rows="9">{ "city": "上海", "days": 2 }</textarea>
+                        </label>
+                        <button type="submit" class="primary-button field-wide">执行工具调用</button>
+                    </form>
+                    <pre id="invokeResult" class="result-console">工具调用结果会显示在这里。</pre>
                 </div>
             </article>
         </section>
