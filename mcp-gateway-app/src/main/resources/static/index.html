@@ -3,184 +3,323 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCP Gateway Console</title>
+    <title>MCP Gateway Admin Console</title>
     <link rel="stylesheet" href="/assets/styles.css">
 </head>
 <body>
-<div class="backdrop"></div>
-<main class="shell">
-    <section class="hero">
-        <div>
-            <p class="eyebrow">MCP Gateway</p>
-            <h1>Website Console for Routing, Policy, and Tool Execution</h1>
-            <p class="lead">
-                This console manages upstream MCP services, tool definitions, access policies,
-                and mock execution flow from one Spring Boot site.
+<div class="app-shell">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-mark">MG</div>
+            <div>
+                <p class="brand-kicker">Gateway Control</p>
+                <h1>MCP Admin</h1>
+            </div>
+        </div>
+
+        <nav class="nav-group">
+            <a href="#overview" class="nav-link">Overview</a>
+            <a href="#registry" class="nav-link">Upstreams</a>
+            <a href="#catalog" class="nav-link">Tools</a>
+            <a href="#policies" class="nav-link">Policies</a>
+            <a href="#lab" class="nav-link">Invocation Lab</a>
+        </nav>
+
+        <section class="sidebar-card">
+            <p class="card-kicker">Profiles</p>
+            <h2>Demo Access</h2>
+            <button id="useAdmin" class="profile-button profile-button-primary" type="button">
+                <span>Use Demo Admin</span>
+                <small>Manage upstreams, tools, policies, and calls</small>
+            </button>
+            <button id="useApp" class="profile-button" type="button">
+                <span>Use Demo Caller</span>
+                <small>View discoverable tools and invoke only</small>
+            </button>
+        </section>
+
+        <section class="sidebar-card">
+            <p class="card-kicker">Active Context</p>
+            <h2 id="activeProfile">demo-admin</h2>
+            <code id="activeCredential" class="token">demo-admin-key</code>
+            <div class="meta-grid">
+                <div>
+                    <span>Mode</span>
+                    <strong id="activeAuthMode">API Key</strong>
+                </div>
+                <div>
+                    <span>Environment</span>
+                    <strong id="activeEnvironment">dev</strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="sidebar-note">
+            <p class="card-kicker">Note</p>
+            <p>
+                This is the website admin console. The “caller” model below refers to gateway credentials,
+                not a desktop client.
             </p>
-        </div>
-        <div class="hero-card">
-            <p class="hero-label">Demo credentials</p>
-            <button id="useAdmin" class="ghost-button">Use demo admin</button>
-            <button id="useApp" class="ghost-button">Use demo app</button>
-            <div class="credential-note">
-                <span>API Key</span>
-                <strong id="activeCredential">demo-admin-key</strong>
-            </div>
-        </div>
-    </section>
+        </section>
+    </aside>
 
-    <section class="grid two-col">
-        <article class="panel">
-            <div class="panel-header">
-                <div>
-                    <p class="panel-kicker">Access</p>
-                    <h2>Caller Context</h2>
+    <main class="workspace">
+        <header class="topbar">
+            <div>
+                <p class="page-kicker">Admin Console</p>
+                <h2>Operate routing, governance, and execution from one control plane</h2>
+                <p class="page-copy">
+                    Register upstream MCP services, publish tool metadata, enforce caller policies,
+                    and validate tool invocation flow without leaving this dashboard.
+                </p>
+            </div>
+            <div class="status-stack">
+                <div class="status-card">
+                    <span>System</span>
+                    <strong id="statusText">Ready</strong>
+                </div>
+                <div class="status-card">
+                    <span>Last Request</span>
+                    <strong id="requestText">-</strong>
                 </div>
             </div>
-            <form id="authForm" class="stack">
-                <label>
-                    Environment
-                    <input id="environment" name="environment" value="dev">
-                </label>
-                <label>
-                    Auth Mode
-                    <select id="authModeSelect" name="authModeSelect">
-                        <option value="apiKey">API Key</option>
-                        <option value="bearer">Bearer Token</option>
-                    </select>
-                </label>
-                <label>
-                    Credential
-                    <input id="credential" name="credential" value="demo-admin-key">
-                </label>
-                <label>
-                    Session Id
-                    <input id="sessionId" name="sessionId" placeholder="optional session id">
-                </label>
-                <button type="submit" class="primary-button">Apply credential</button>
-            </form>
-        </article>
+        </header>
 
-        <article class="panel">
-            <div class="panel-header">
+        <section id="overview" class="surface">
+            <div class="surface-head">
                 <div>
-                    <p class="panel-kicker">Health</p>
-                    <h2>Gateway Overview</h2>
+                    <p class="section-kicker">Overview</p>
+                    <h3>Runtime Snapshot</h3>
                 </div>
-                <button id="refreshOverview" class="ghost-button">Refresh</button>
+                <button id="refreshOverview" class="secondary-button" type="button">Refresh snapshot</button>
             </div>
-            <div id="overviewCards" class="stats-grid"></div>
-            <div id="overviewServers" class="list-card"></div>
-        </article>
-    </section>
 
-    <section class="grid two-col">
-        <article class="panel">
-            <div class="panel-header">
-                <div>
-                    <p class="panel-kicker">Admin</p>
-                    <h2>Upstream Servers</h2>
+            <div id="overviewCards" class="metric-grid"></div>
+
+            <div class="overview-grid">
+                <article class="subsurface">
+                    <div class="subsurface-head">
+                        <div>
+                            <p class="section-kicker">Context</p>
+                            <h4>Caller Configuration</h4>
+                        </div>
+                    </div>
+                    <form id="authForm" class="form-grid compact-grid">
+                        <label class="field">
+                            <span>Environment</span>
+                            <input id="environment" name="environment" value="dev">
+                        </label>
+                        <label class="field">
+                            <span>Auth Mode</span>
+                            <select id="authModeSelect" name="authModeSelect">
+                                <option value="apiKey">API Key</option>
+                                <option value="bearer">Bearer Token</option>
+                            </select>
+                        </label>
+                        <label class="field field-wide">
+                            <span>Credential</span>
+                            <input id="credential" name="credential" value="demo-admin-key">
+                        </label>
+                        <label class="field field-wide">
+                            <span>Session Id</span>
+                            <input id="sessionId" name="sessionId" placeholder="optional session id">
+                        </label>
+                        <button type="submit" class="primary-button field-wide">Apply caller context</button>
+                    </form>
+                </article>
+
+                <article class="subsurface">
+                    <div class="subsurface-head">
+                        <div>
+                            <p class="section-kicker">Health</p>
+                            <h4>Enabled Upstreams</h4>
+                        </div>
+                    </div>
+                    <div id="overviewServers" class="server-list"></div>
+                </article>
+            </div>
+        </section>
+
+        <section class="workspace-grid">
+            <article id="registry" class="surface">
+                <div class="surface-head">
+                    <div>
+                        <p class="section-kicker">Admin</p>
+                        <h3>Upstream Registry</h3>
+                    </div>
+                    <button id="loadUpstreams" class="secondary-button" type="button">Reload</button>
                 </div>
-                <button id="loadUpstreams" class="ghost-button">Reload</button>
-            </div>
-            <form id="upstreamForm" class="grid-form">
-                <label>Server Code<input name="serverCode" placeholder="weather"></label>
-                <label>Display Name<input name="name" placeholder="Weather Server"></label>
-                <label>Base URL<input name="baseUrl" placeholder="https://weather.example.com/mcp"></label>
-                <label>Transport
-                    <select name="transportType">
-                        <option value="HTTP">HTTP</option>
-                        <option value="SSE">SSE</option>
-                    </select>
-                </label>
-                <label>Auth Mode<input name="authMode" value="API_KEY"></label>
-                <label>Timeout (ms)<input name="timeoutMs" type="number" value="3000"></label>
-                <label class="checkbox-row"><input name="enabled" type="checkbox" checked> Enabled</label>
-                <button type="submit" class="primary-button wide">Register upstream</button>
-            </form>
-            <div id="upstreamList" class="table-card"></div>
-        </article>
 
-        <article class="panel">
-            <div class="panel-header">
-                <div>
-                    <p class="panel-kicker">Admin</p>
-                    <h2>Tool Catalog</h2>
+                <div class="management-grid">
+                    <form id="upstreamForm" class="form-grid">
+                        <label class="field">
+                            <span>Server Code</span>
+                            <input name="serverCode" placeholder="weather">
+                        </label>
+                        <label class="field">
+                            <span>Display Name</span>
+                            <input name="name" placeholder="Weather Server">
+                        </label>
+                        <label class="field field-wide">
+                            <span>Base URL</span>
+                            <input name="baseUrl" placeholder="https://weather.example.com/mcp">
+                        </label>
+                        <label class="field">
+                            <span>Transport</span>
+                            <select name="transportType">
+                                <option value="HTTP">HTTP</option>
+                                <option value="SSE">SSE</option>
+                            </select>
+                        </label>
+                        <label class="field">
+                            <span>Auth Mode</span>
+                            <input name="authMode" value="API_KEY">
+                        </label>
+                        <label class="field">
+                            <span>Timeout (ms)</span>
+                            <input name="timeoutMs" type="number" value="3000">
+                        </label>
+                        <label class="toggle-field">
+                            <input name="enabled" type="checkbox" checked>
+                            <span>Enabled on create</span>
+                        </label>
+                        <button type="submit" class="primary-button field-wide">Register upstream</button>
+                    </form>
+                    <div id="upstreamList" class="data-panel"></div>
                 </div>
-                <button id="loadTools" class="ghost-button">Reload</button>
-            </div>
-            <form id="toolForm" class="grid-form">
-                <label>Server Code<input name="serverCode" placeholder="weather"></label>
-                <label>Tool Name<input name="toolName" placeholder="forecast"></label>
-                <label class="wide">Description<input name="description" placeholder="Return mock forecast details"></label>
-                <label class="wide">Input Schema<textarea name="inputSchema" rows="4">{ "city": "string" }</textarea></label>
-                <label class="checkbox-row"><input name="enabled" type="checkbox" checked> Enabled</label>
-                <button type="submit" class="primary-button wide">Register tool</button>
-            </form>
-            <div id="toolList" class="table-card"></div>
-        </article>
-    </section>
+            </article>
 
-    <section class="grid two-col">
-        <article class="panel">
-            <div class="panel-header">
-                <div>
-                    <p class="panel-kicker">Admin</p>
-                    <h2>Access Policies</h2>
+            <article id="catalog" class="surface">
+                <div class="surface-head">
+                    <div>
+                        <p class="section-kicker">Admin</p>
+                        <h3>Tool Catalog</h3>
+                    </div>
+                    <button id="loadTools" class="secondary-button" type="button">Reload</button>
                 </div>
-                <button id="loadPolicies" class="ghost-button">Reload</button>
-            </div>
-            <form id="policyForm" class="grid-form">
-                <label>Subject Type
-                    <select name="subjectType">
-                        <option value="CLIENT">CLIENT</option>
-                        <option value="ROLE">ROLE</option>
-                    </select>
-                </label>
-                <label>Subject Id<input name="subjectId" placeholder="demo-app or APP"></label>
-                <label>Tool Identifier<input name="toolIdentifier" placeholder="weather:forecast"></label>
-                <label>Decision
-                    <select name="decision">
-                        <option value="ALLOW">ALLOW</option>
-                        <option value="DENY">DENY</option>
-                    </select>
-                </label>
-                <label class="wide">Reason<input name="reason" placeholder="Allow only demo app"></label>
-                <label class="checkbox-row"><input name="enabled" type="checkbox" checked> Enabled</label>
-                <button type="submit" class="primary-button wide">Save policy</button>
-            </form>
-            <div id="policyList" class="table-card"></div>
-        </article>
 
-        <article class="panel">
-            <div class="panel-header">
-                <div>
-                    <p class="panel-kicker">Gateway</p>
-                    <h2>Discovery and Invocation</h2>
+                <div class="management-grid">
+                    <form id="toolForm" class="form-grid">
+                        <label class="field">
+                            <span>Server Code</span>
+                            <input name="serverCode" placeholder="weather">
+                        </label>
+                        <label class="field">
+                            <span>Tool Name</span>
+                            <input name="toolName" placeholder="forecast">
+                        </label>
+                        <label class="field field-wide">
+                            <span>Description</span>
+                            <input name="description" placeholder="Return mock forecast details">
+                        </label>
+                        <label class="field field-wide">
+                            <span>Input Schema</span>
+                            <textarea name="inputSchema" rows="5">{ "city": "string" }</textarea>
+                        </label>
+                        <label class="toggle-field">
+                            <input name="enabled" type="checkbox" checked>
+                            <span>Enabled on create</span>
+                        </label>
+                        <button type="submit" class="primary-button field-wide">Register tool</button>
+                    </form>
+                    <div id="toolList" class="data-panel"></div>
                 </div>
-                <button id="loadDiscovery" class="ghost-button">Refresh tools</button>
-            </div>
-            <div id="discoveryList" class="list-card"></div>
-            <form id="invokeForm" class="stack invoke-form">
-                <label>Tool Identifier<input name="toolIdentifier" placeholder="weather:forecast"></label>
-                <label>Arguments JSON<textarea name="arguments" rows="6">{ "city": "Shanghai", "days": 2 }</textarea></label>
-                <button type="submit" class="primary-button">Invoke tool</button>
-            </form>
-            <pre id="invokeResult" class="code-card">Invocation result will appear here.</pre>
-        </article>
-    </section>
+            </article>
+        </section>
 
-    <section class="status-strip">
-        <div>
-            <span>Status</span>
-            <strong id="statusText">Ready</strong>
-        </div>
-        <div>
-            <span>Last Request</span>
-            <strong id="requestText">-</strong>
-        </div>
-    </section>
-</main>
+        <section class="workspace-grid">
+            <article id="policies" class="surface">
+                <div class="surface-head">
+                    <div>
+                        <p class="section-kicker">Admin</p>
+                        <h3>Access Policies</h3>
+                    </div>
+                    <button id="loadPolicies" class="secondary-button" type="button">Reload</button>
+                </div>
+
+                <div class="management-grid">
+                    <form id="policyForm" class="form-grid">
+                        <label class="field">
+                            <span>Subject Type</span>
+                            <select name="subjectType">
+                                <option value="CLIENT">CLIENT</option>
+                                <option value="ROLE">ROLE</option>
+                            </select>
+                        </label>
+                        <label class="field">
+                            <span>Subject Id</span>
+                            <input name="subjectId" placeholder="demo-app or APP">
+                        </label>
+                        <label class="field field-wide">
+                            <span>Tool Identifier</span>
+                            <input name="toolIdentifier" placeholder="weather:forecast">
+                        </label>
+                        <label class="field">
+                            <span>Decision</span>
+                            <select name="decision">
+                                <option value="ALLOW">ALLOW</option>
+                                <option value="DENY">DENY</option>
+                            </select>
+                        </label>
+                        <label class="field">
+                            <span>Reason</span>
+                            <input name="reason" placeholder="Allow only demo app">
+                        </label>
+                        <label class="toggle-field">
+                            <input name="enabled" type="checkbox" checked>
+                            <span>Enabled on save</span>
+                        </label>
+                        <button type="submit" class="primary-button field-wide">Save policy</button>
+                    </form>
+                    <div id="policyList" class="data-panel"></div>
+                </div>
+            </article>
+
+            <article id="lab" class="surface">
+                <div class="surface-head">
+                    <div>
+                        <p class="section-kicker">Gateway</p>
+                        <h3>Invocation Lab</h3>
+                    </div>
+                    <button id="loadDiscovery" class="secondary-button" type="button">Refresh tools</button>
+                </div>
+
+                <div class="lab-grid">
+                    <article class="subsurface">
+                        <div class="subsurface-head">
+                            <div>
+                                <p class="section-kicker">Discovery</p>
+                                <h4>Visible Tools</h4>
+                            </div>
+                        </div>
+                        <div id="discoveryList" class="tool-grid"></div>
+                    </article>
+
+                    <article class="subsurface">
+                        <div class="subsurface-head">
+                            <div>
+                                <p class="section-kicker">Execute</p>
+                                <h4>Invoke Tool</h4>
+                            </div>
+                        </div>
+                        <form id="invokeForm" class="form-grid">
+                            <label class="field field-wide">
+                                <span>Tool Identifier</span>
+                                <input name="toolIdentifier" placeholder="weather:forecast">
+                            </label>
+                            <label class="field field-wide">
+                                <span>Arguments JSON</span>
+                                <textarea name="arguments" rows="8">{ "city": "Shanghai", "days": 2 }</textarea>
+                            </label>
+                            <button type="submit" class="primary-button field-wide">Invoke tool</button>
+                        </form>
+                        <pre id="invokeResult" class="result-console">Invocation result will appear here.</pre>
+                    </article>
+                </div>
+            </article>
+        </section>
+    </main>
+</div>
 
 <script src="/assets/app.js"></script>
 </body>

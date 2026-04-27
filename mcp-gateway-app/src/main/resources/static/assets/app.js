@@ -12,6 +12,16 @@ const setStatus = (message, requestId = "-") => {
   $("#requestText").textContent = requestId || "-";
 };
 
+const syncIdentity = () => {
+  const isAdmin =
+    state.credential === "demo-admin-key" || state.credential === "demo-admin-token";
+  $("#activeProfile").textContent = isAdmin ? "demo-admin" : "demo-app";
+  $("#activeCredential").textContent = state.credential;
+  $("#activeAuthMode").textContent =
+    state.authMode === "bearer" ? "Bearer Token" : "API Key";
+  $("#activeEnvironment").textContent = state.environment;
+};
+
 const requestHeaders = () => {
   const headers = {
     "Content-Type": "application/json",
@@ -50,9 +60,15 @@ const escapeHtml = (value) =>
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
 
-const table = (columns, rows) => {
+const emptyState = (title, detail) =>
+  `<div class="empty-state"><div><strong>${escapeHtml(title)}</strong><small>${escapeHtml(detail)}</small></div></div>`;
+
+const badge = (label, tone = "neutral") =>
+  `<span class="badge badge-${tone}">${escapeHtml(label)}</span>`;
+
+const table = (columns, rows, emptyTitle, emptyDetail) => {
   if (!rows.length) {
-    return "<p>No records yet.</p>";
+    return emptyState(emptyTitle, emptyDetail);
   }
   const head = columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("");
   const body = rows
@@ -64,39 +80,78 @@ const table = (columns, rows) => {
 const loadOverview = async () => {
   const data = await api(`/api/v1/gateway/overview?environment=${encodeURIComponent(state.environment)}`);
   $("#overviewCards").innerHTML = [
-    ["Caller", data.callerId],
-    ["Upstreams", data.totalUpstreams],
-    ["Enabled", data.enabledUpstreams],
-    ["Routable", data.routableUpstreams],
-    ["Visible Tools", data.discoverableTools],
+    ["Caller", data.callerId, "Authenticated gateway identity"],
+    ["Upstreams", data.totalUpstreams, "Registered in current environment"],
+    ["Enabled", data.enabledUpstreams, "Available for management operations"],
+    ["Routable", data.routableUpstreams, "Healthy and ready for invocation"],
+    ["Visible Tools", data.discoverableTools, "Filtered by current caller policy"],
   ]
-    .map(([label, value]) => `<div class="stat"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`)
+    .map(
+      ([label, value, detail]) =>
+        `<div class="metric-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(
+          value
+        )}</strong><small>${escapeHtml(detail)}</small></div>`
+    )
     .join("");
+
   $("#overviewServers").innerHTML = data.enabledServers.length
     ? data.enabledServers
         .map(
-          (server) =>
-            `<span class="pill ${server.healthStatus === "UP" ? "" : "down"}">${escapeHtml(server.serverCode)} · ${escapeHtml(server.healthStatus)}</span>`
+          (server) => `
+            <article class="server-card">
+              <div>
+                <strong>${escapeHtml(server.serverCode)}</strong>
+                <small>${escapeHtml(server.name)} · ${escapeHtml(server.transportType)} · ${escapeHtml(
+                  server.baseUrl
+                )}</small>
+              </div>
+              <div>${badge(server.healthStatus, server.healthStatus === "UP" ? "success" : "danger")}</div>
+            </article>`
         )
         .join("")
-    : "<p>No enabled upstreams yet.</p>";
+    : emptyState("No enabled upstreams", "Register and refresh an upstream to make it routable.");
 };
 
 const loadUpstreams = async () => {
   const data = await api(`/api/v1/admin/upstreams?environment=${encodeURIComponent(state.environment)}`);
   $("#upstreamList").innerHTML = table(
     [
-      { label: "Server", render: (row) => `<strong>${escapeHtml(row.serverCode)}</strong><br>${escapeHtml(row.name)}` },
-      { label: "Base URL", render: (row) => escapeHtml(row.baseUrl) },
-      { label: "Transport", render: (row) => escapeHtml(row.transportType) },
-      { label: "Status", render: (row) => `${escapeHtml(row.enabled)} / ${escapeHtml(row.healthStatus)}` },
+      {
+        label: "Server",
+        render: (row) =>
+          `<strong>${escapeHtml(row.serverCode)}</strong><br><small>${escapeHtml(row.name)}</small>`,
+      },
+      {
+        label: "Endpoint",
+        render: (row) =>
+          `<code>${escapeHtml(row.baseUrl)}</code><br><small>${escapeHtml(row.transportType)} · ${escapeHtml(
+            row.authMode
+          )}</small>`,
+      },
+      {
+        label: "State",
+        render: (row) =>
+          `${badge(row.enabled ? "Enabled" : "Disabled", row.enabled ? "success" : "danger")}
+           ${badge(
+             row.healthStatus,
+             row.healthStatus === "UP"
+               ? "success"
+               : row.healthStatus === "DOWN"
+               ? "danger"
+               : "neutral"
+           )}`,
+      },
       {
         label: "Action",
         render: (row) =>
-          `<button class="ghost-button refresh-upstream" data-server="${escapeHtml(row.serverCode)}">Refresh</button>`,
+          `<button class="inline-button refresh-upstream" data-server="${escapeHtml(
+            row.serverCode
+          )}">Refresh status</button>`,
       },
     ],
-    data
+    data,
+    "No upstreams yet",
+    "Register the first upstream from the form on the left."
   );
 };
 
@@ -104,12 +159,29 @@ const loadTools = async () => {
   const data = await api(`/api/v1/admin/tools?environment=${encodeURIComponent(state.environment)}`);
   $("#toolList").innerHTML = table(
     [
-      { label: "Identifier", render: (row) => `<strong>${escapeHtml(row.toolIdentifier)}</strong>` },
-      { label: "Server", render: (row) => escapeHtml(row.serverCode) },
-      { label: "Description", render: (row) => escapeHtml(row.description || "-") },
-      { label: "Enabled", render: (row) => escapeHtml(row.enabled) },
+      {
+        label: "Tool",
+        render: (row) =>
+          `<strong>${escapeHtml(row.toolName)}</strong><br><small>${escapeHtml(
+            row.toolIdentifier
+          )}</small>`,
+      },
+      {
+        label: "Server",
+        render: (row) => badge(row.serverCode, "neutral"),
+      },
+      {
+        label: "Description",
+        render: (row) => escapeHtml(row.description || "-"),
+      },
+      {
+        label: "Status",
+        render: (row) => badge(row.enabled ? "Enabled" : "Disabled", row.enabled ? "success" : "danger"),
+      },
     ],
-    data
+    data,
+    "No tools yet",
+    "Register tool metadata after at least one upstream exists."
   );
 };
 
@@ -117,12 +189,29 @@ const loadPolicies = async () => {
   const data = await api(`/api/v1/admin/policies?environment=${encodeURIComponent(state.environment)}`);
   $("#policyList").innerHTML = table(
     [
-      { label: "Subject", render: (row) => `<strong>${escapeHtml(row.subjectType)}</strong><br>${escapeHtml(row.subjectId)}` },
-      { label: "Tool", render: (row) => escapeHtml(row.toolIdentifier) },
-      { label: "Decision", render: (row) => escapeHtml(row.decision) },
-      { label: "Reason", render: (row) => escapeHtml(row.reason || "-") },
+      {
+        label: "Subject",
+        render: (row) =>
+          `<strong>${escapeHtml(row.subjectId)}</strong><br><small>${escapeHtml(
+            row.subjectType
+          )}</small>`,
+      },
+      {
+        label: "Tool",
+        render: (row) => `<code>${escapeHtml(row.toolIdentifier)}</code>`,
+      },
+      {
+        label: "Decision",
+        render: (row) => badge(row.decision, row.decision === "ALLOW" ? "success" : "danger"),
+      },
+      {
+        label: "Reason",
+        render: (row) => escapeHtml(row.reason || "-"),
+      },
     ],
-    data
+    data,
+    "No policies yet",
+    "Add allow or deny rules for caller identities."
   );
 };
 
@@ -131,11 +220,14 @@ const loadDiscovery = async () => {
   $("#discoveryList").innerHTML = data.length
     ? data
         .map(
-          (tool) =>
-            `<span class="pill">${escapeHtml(tool.toolIdentifier)} · ${escapeHtml(tool.description || "No description")}</span>`
+          (tool) => `
+            <article class="tool-card">
+              <strong>${escapeHtml(tool.toolIdentifier)}</strong>
+              <small>${escapeHtml(tool.description || "No description")}</small>
+            </article>`
         )
         .join("")
-    : "<p>No discoverable tools for the current caller.</p>";
+    : emptyState("No discoverable tools", "Current caller has no visible tools in this environment.");
 };
 
 const invokeTool = async (event) => {
@@ -165,7 +257,7 @@ $("#authForm").addEventListener("submit", async (event) => {
   state.authMode = $("#authModeSelect").value;
   state.credential = $("#credential").value.trim();
   state.sessionId = $("#sessionId").value.trim();
-  $("#activeCredential").textContent = state.credential;
+  syncIdentity();
   await refreshAll();
 });
 
@@ -184,6 +276,7 @@ $("#upstreamForm").addEventListener("submit", async (event) => {
   });
   event.currentTarget.reset();
   await loadUpstreams();
+  await loadOverview();
 });
 
 $("#toolForm").addEventListener("submit", async (event) => {
@@ -200,6 +293,7 @@ $("#toolForm").addEventListener("submit", async (event) => {
   event.currentTarget.reset();
   await loadTools();
   await loadDiscovery();
+  await loadOverview();
 });
 
 $("#policyForm").addEventListener("submit", async (event) => {
@@ -217,6 +311,7 @@ $("#policyForm").addEventListener("submit", async (event) => {
   event.currentTarget.reset();
   await loadPolicies();
   await loadDiscovery();
+  await loadOverview();
 });
 
 $("#invokeForm").addEventListener("submit", async (event) => {
@@ -238,7 +333,7 @@ $("#useAdmin").addEventListener("click", async () => {
   state.credential = "demo-admin-key";
   $("#authModeSelect").value = "apiKey";
   $("#credential").value = state.credential;
-  $("#activeCredential").textContent = state.credential;
+  syncIdentity();
   await refreshAll();
 });
 
@@ -247,7 +342,7 @@ $("#useApp").addEventListener("click", async () => {
   state.credential = "demo-app-key";
   $("#authModeSelect").value = "apiKey";
   $("#credential").value = state.credential;
-  $("#activeCredential").textContent = state.credential;
+  syncIdentity();
   await refreshAll();
 });
 
@@ -257,24 +352,41 @@ document.addEventListener("click", async (event) => {
     return;
   }
   const serverCode = button.dataset.server;
-  await submitJson(`/api/v1/admin/upstreams/${encodeURIComponent(serverCode)}/refresh?environment=${encodeURIComponent(state.environment)}`, {});
+  await submitJson(
+    `/api/v1/admin/upstreams/${encodeURIComponent(serverCode)}/refresh?environment=${encodeURIComponent(
+      state.environment
+    )}`,
+    {}
+  );
   await refreshAll();
 });
 
 const refreshAll = async () => {
   try {
+    syncIdentity();
     await loadOverview();
     if (state.credential === "demo-admin-key" || state.credential === "demo-admin-token") {
       await Promise.all([loadUpstreams(), loadTools(), loadPolicies()]);
     } else {
-      $("#upstreamList").innerHTML = "<p>Admin credentials are required to view upstreams.</p>";
-      $("#toolList").innerHTML = "<p>Admin credentials are required to view tools.</p>";
-      $("#policyList").innerHTML = "<p>Admin credentials are required to view policies.</p>";
+      $("#upstreamList").innerHTML = emptyState(
+        "Admin credential required",
+        "Switch to demo-admin to manage upstreams."
+      );
+      $("#toolList").innerHTML = emptyState(
+        "Admin credential required",
+        "Switch to demo-admin to manage tools."
+      );
+      $("#policyList").innerHTML = emptyState(
+        "Admin credential required",
+        "Switch to demo-admin to manage policies."
+      );
     }
     await loadDiscovery();
   } catch (error) {
     setStatus(error.message, "-");
+    $("#invokeResult").textContent = error.message;
   }
 };
 
+syncIdentity();
 refreshAll();
