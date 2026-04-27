@@ -5,11 +5,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
@@ -18,6 +21,9 @@ class GatewayConsoleMvcTests {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Test
     void shouldRejectMissingCredentials() throws Exception {
@@ -134,5 +140,34 @@ class GatewayConsoleMvcTests {
                 .andExpect(jsonPath("$.data.repoPath").value("E:\\Internship\\program\\big-market-71772-z"))
                 .andExpect(jsonPath("$.data.baseUrl").value("http://127.0.0.1:8091"))
                 .andExpect(jsonPath("$.data.supportedOperations.length()").value(5));
+    }
+
+    @Test
+    void shouldIssueConsoleTokenAndUseItForSessionAndAdminOverview() throws Exception {
+        MvcResult issueResult = mockMvc.perform(post("/api/v1/public/console/tokens/demo")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "profile":"demo-admin",
+                                  "environment":"dev"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.tokenType").value("Bearer"))
+                .andReturn();
+
+        JsonNode issuePayload = objectMapper.readTree(issueResult.getResponse().getContentAsString());
+        String accessToken = issuePayload.path("data").path("accessToken").asText();
+
+        mockMvc.perform(get("/api/v1/console/session")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.profile").value("demo-admin"))
+                .andExpect(jsonPath("$.data.environment").value("dev"));
+
+        mockMvc.perform(get("/api/v1/admin/systems/big-market")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.systemName").value("big-market-71772-z"));
     }
 }

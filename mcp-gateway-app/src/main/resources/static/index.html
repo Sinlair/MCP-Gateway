@@ -7,7 +7,52 @@
     <link rel="stylesheet" href="/assets/styles.css">
 </head>
 <body>
-<div class="console-shell">
+<section id="accessGate" class="access-gate">
+    <div class="gate-shell">
+        <article class="gate-panel gate-panel-primary">
+            <p class="eyebrow accent">MCP Gateway</p>
+            <h1>令牌驱动的系统操作与监控入口</h1>
+            <p class="gate-copy">
+                这里不是传统账号密码后台。你需要先由 MCP Gateway 签发访问令牌，
+                再使用这个令牌进入中文监控控制台。控制台会根据令牌自动决定：
+                当前可访问的系统、可见工具、可执行操作以及权限范围。
+            </p>
+            <ul class="gate-list">
+                <li>网关负责：签发访问令牌、管理受管系统能力、治理工具暴露</li>
+                <li>控制台负责：用 token 驱动系统操作、运行监控、策略与调用实验</li>
+                <li>当前受管系统：`big-market-71772-z`</li>
+            </ul>
+        </article>
+
+        <article class="gate-panel">
+            <p class="eyebrow">访问控制台</p>
+            <h2>输入访问令牌</h2>
+            <label class="field field-wide">
+                <span>Bearer Token</span>
+                <textarea id="gateTokenInput" rows="5" placeholder="粘贴由 MCP Gateway 签发的访问令牌"></textarea>
+            </label>
+            <div class="gate-actions">
+                <button id="gateEnterButton" class="primary-button" type="button">进入控制台</button>
+                <button id="gateClearButton" class="secondary-button" type="button">清空</button>
+            </div>
+            <p id="gateMessage" class="gate-message">支持 URL `?token=...` 自动带入，也会记住本地最近一次令牌。</p>
+        </article>
+
+        <article class="gate-panel">
+            <p class="eyebrow">本地演示</p>
+            <h2>快速获取演示令牌</h2>
+            <p class="gate-copy">
+                仅用于本地验证控制台访问模型。生产环境应由 MCP Gateway 在配置流程中签发正式令牌。
+            </p>
+            <div class="gate-actions stacked">
+                <button id="issueAdminTokenButton" class="primary-button" type="button">签发演示管理员令牌</button>
+                <button id="issueAppTokenButton" class="secondary-button" type="button">签发演示调用方令牌</button>
+            </div>
+        </article>
+    </div>
+</section>
+
+<div id="consoleApp" class="console-shell hidden">
     <aside class="ops-rail">
         <div class="rail-brand">
             <div class="brand-badge">MG</div>
@@ -26,39 +71,39 @@
         </nav>
 
         <section class="rail-card">
-            <p class="eyebrow">身份预设</p>
-            <h2>调用方切换</h2>
-            <button id="useAdmin" class="rail-button rail-button-primary" type="button">
-                <span>演示管理员</span>
-                <small>控制面 + 运行面全部开放</small>
-            </button>
-            <button id="useApp" class="rail-button" type="button">
-                <span>演示调用方</span>
-                <small>只保留发现与调用能力</small>
-            </button>
-        </section>
-
-        <section class="rail-card">
-            <p class="eyebrow">当前上下文</p>
-            <h2 id="activeProfile">demo-admin</h2>
-            <code id="activeCredential" class="token-line">demo-admin-key</code>
+            <p class="eyebrow">令牌会话</p>
+            <h2 id="activeProfile">-</h2>
+            <code id="activeCredential" class="token-line">-</code>
             <div class="rail-meta">
                 <div>
                     <span>认证方式</span>
-                    <strong id="activeAuthMode">API Key</strong>
+                    <strong>Bearer Token</strong>
                 </div>
                 <div>
                     <span>环境</span>
-                    <strong id="activeEnvironment">dev</strong>
+                    <strong id="activeEnvironment">-</strong>
                 </div>
+                <div>
+                    <span>角色</span>
+                    <strong id="activeRoles">-</strong>
+                </div>
+                <div>
+                    <span>过期时间</span>
+                    <strong id="activeExpiresAt">-</strong>
+                </div>
+            </div>
+            <div class="rail-actions">
+                <button id="switchAdminTokenButton" class="secondary-button" type="button">切换管理员令牌</button>
+                <button id="switchAppTokenButton" class="secondary-button" type="button">切换调用方令牌</button>
+                <button id="logoutTokenButton" class="inline-button" type="button">退出令牌</button>
             </div>
         </section>
 
         <section class="rail-note">
-            <p class="eyebrow">说明</p>
+            <p class="eyebrow">模型</p>
             <p>
-                这里的“调用方”是网关凭证身份，不是桌面客户端。这个页面本身就是中文网站后台，
-                同时承担监控控制台与系统操作面板。
+                MCP Gateway 负责签发访问令牌和管理系统能力；
+                控制台网站负责基于 token 执行系统操作、运行监控和调用实验。
             </p>
         </section>
     </aside>
@@ -67,10 +112,10 @@
         <header class="masthead">
             <div>
                 <p class="eyebrow accent">MCP 网关监控控制台</p>
-                <h2>监控路由健康、治理工具暴露，并直接控制 big-market 系统</h2>
+                <h2>用访问令牌进入受管系统控制面与运行监控面</h2>
                 <p class="masthead-copy">
-                    这个控制台同时覆盖网关运行态和业务系统控制面：上游服务、调用策略、工具发现、调用实验室，
-                    以及 `big-market-71772-z` 的活动装配、策略装配、奖品查询、账户查询和抽奖操作。
+                    当前控制台以 token 为唯一访问凭证。令牌决定你可以查看哪些上游服务、工具和策略，
+                    也决定你是否有权限控制 `big-market-71772-z` 这样的受管系统。
                 </p>
             </div>
             <div class="masthead-status">
@@ -122,32 +167,11 @@
                 <article class="panel">
                     <div class="panel-head">
                         <div>
-                            <p class="eyebrow accent">会话上下文</p>
-                            <h4>网关调用身份</h4>
+                            <p class="eyebrow accent">令牌上下文</p>
+                            <h4>当前访问令牌</h4>
                         </div>
                     </div>
-                    <form id="authForm" class="form-grid compact-grid">
-                        <label class="field">
-                            <span>环境</span>
-                            <input id="environment" name="environment" value="dev">
-                        </label>
-                        <label class="field">
-                            <span>认证方式</span>
-                            <select id="authModeSelect" name="authModeSelect">
-                                <option value="apiKey">API Key</option>
-                                <option value="bearer">Bearer Token</option>
-                            </select>
-                        </label>
-                        <label class="field field-wide">
-                            <span>凭证</span>
-                            <input id="credential" name="credential" value="demo-admin-key">
-                        </label>
-                        <label class="field field-wide">
-                            <span>会话 ID</span>
-                            <input id="sessionId" name="sessionId" placeholder="可选，用于链路追踪">
-                        </label>
-                        <button type="submit" class="primary-button field-wide">应用调用方上下文</button>
-                    </form>
+                    <div id="tokenContextPanel" class="token-context-grid"></div>
                 </article>
 
                 <article class="panel">
@@ -305,7 +329,7 @@
                 <div class="surface-head">
                     <div>
                         <p class="eyebrow accent">发现视图</p>
-                        <h3>当前调用方可见工具</h3>
+                        <h3>当前令牌可见工具</h3>
                     </div>
                     <button id="loadDiscovery" class="secondary-button" type="button">刷新发现结果</button>
                 </div>

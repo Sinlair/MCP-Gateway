@@ -1,17 +1,14 @@
+const TOKEN_STORAGE_KEY = "mcp_console_access_token";
+
 const state = {
-  authMode: "apiKey",
-  credential: "demo-admin-key",
+  accessToken: "",
   environment: "dev",
   sessionId: "",
+  session: null,
   activities: [],
 };
 
 const $ = (selector) => document.querySelector(selector);
-
-const isAdminCredential = () =>
-  state.credential === "demo-admin-key" || state.credential === "demo-admin-token";
-
-const currentProfile = () => (isAdminCredential() ? "demo-admin" : "demo-app");
 
 const timeStamp = () =>
   new Date().toLocaleTimeString("zh-CN", {
@@ -20,34 +17,6 @@ const timeStamp = () =>
     second: "2-digit",
     hour12: false,
   });
-
-const setStatus = (message, requestId = "-") => {
-  $("#statusText").textContent = message;
-  $("#requestText").textContent = requestId || "-";
-};
-
-const syncIdentity = () => {
-  $("#activeProfile").textContent = currentProfile();
-  $("#activeCredential").textContent = state.credential;
-  $("#activeAuthMode").textContent =
-    state.authMode === "bearer" ? "Bearer Token" : "API Key";
-  $("#activeEnvironment").textContent = state.environment;
-};
-
-const requestHeaders = () => {
-  const headers = {
-    "Content-Type": "application/json",
-  };
-  if (state.sessionId) {
-    headers["X-Session-Id"] = state.sessionId;
-  }
-  if (state.authMode === "bearer") {
-    headers.Authorization = `Bearer ${state.credential}`;
-  } else {
-    headers["X-API-Key"] = state.credential;
-  }
-  return headers;
-};
 
 const escapeHtml = (value) =>
   String(value ?? "")
@@ -75,6 +44,38 @@ const table = (columns, rows, emptyTitle, emptyDetail) => {
   return `<table class="table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
 };
 
+const isAdminSession = () =>
+  Boolean(state.session && Array.isArray(state.session.roles) && state.session.roles.includes("ADMIN"));
+
+const currentProfile = () => (state.session?.profile ? state.session.profile : "未认证");
+
+const setStatus = (message, requestId = "-") => {
+  $("#statusText").textContent = message || "就绪";
+  $("#requestText").textContent = requestId || "-";
+};
+
+const setGateMessage = (message, tone = "neutral") => {
+  const el = $("#gateMessage");
+  el.textContent = message;
+  el.dataset.tone = tone;
+};
+
+const rememberToken = (token) => {
+  state.accessToken = token;
+  localStorage.setItem(TOKEN_STORAGE_KEY, token);
+};
+
+const clearToken = () => {
+  state.accessToken = "";
+  state.session = null;
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+};
+
+const requestHeaders = () => ({
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${state.accessToken}`,
+});
+
 const logActivity = (title, detail, tone = "info") => {
   state.activities.unshift({
     title,
@@ -88,6 +89,9 @@ const logActivity = (title, detail, tone = "info") => {
 
 const renderActivityFeed = () => {
   const container = $("#activityFeed");
+  if (!container) {
+    return;
+  }
   if (!state.activities.length) {
     container.innerHTML = emptyState("暂无事件", "加载数据或执行操作后，这里会出现事件流。");
     return;
@@ -107,14 +111,43 @@ const renderActivityFeed = () => {
     .join("");
 };
 
-const api = async (path, options = {}) => {
-  const response = await fetch(path, {
-    ...options,
-    headers: {
-      ...requestHeaders(),
-      ...(options.headers || {}),
-    },
-  });
+const showGate = () => {
+  $("#accessGate").classList.remove("hidden");
+  $("#consoleApp").classList.add("hidden");
+};
+
+const showConsole = () => {
+  $("#accessGate").classList.add("hidden");
+  $("#consoleApp").classList.remove("hidden");
+};
+
+const syncSessionIdentity = () => {
+  if (!state.session) {
+    return;
+  }
+  $("#activeProfile").textContent = state.session.profile;
+  $("#activeCredential").textContent = `${state.accessToken.slice(0, 16)}...`;
+  $("#activeEnvironment").textContent = state.session.environment;
+  $("#activeRoles").textContent = state.session.roles.join(", ");
+  $("#activeExpiresAt").textContent = new Date(state.session.expiresAt).toLocaleString("zh-CN");
+  $("#tokenContextPanel").innerHTML = [
+    ["访问画像", state.session.profile, "当前控制台令牌绑定的调用方身份"],
+    ["权限角色", state.session.roles.join(", "), "决定可访问模块与动作范围"],
+    ["令牌环境", state.session.environment, "控制台默认作用的网关环境"],
+    ["过期时间", new Date(state.session.expiresAt).toLocaleString("zh-CN"), "令牌过期后需要重新签发"],
+  ]
+    .map(
+      ([label, value, detail]) => `
+        <div class="metric-card">
+          <span>${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
+          <small>${escapeHtml(detail)}</small>
+        </div>`
+    )
+    .join("");
+};
+
+const parseApiPayload = async (response) => {
   const payload = await response.json();
   const requestId = payload.requestId || response.headers.get("X-Request-Id");
   setStatus(payload.message, requestId);
@@ -124,18 +157,58 @@ const api = async (path, options = {}) => {
   return payload.data;
 };
 
+const api = async (path, options = {}) => {
+  const response = await fetch(path, {
+    ...options,
+    headers: {
+      ...requestHeaders(),
+      ...(options.headers || {}),
+    },
+  });
+  return parseApiPayload(response);
+};
+
+const issueDemoToken = async (profile) => {
+  const response = await fetch("/api/v1/public/console/tokens/demo", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      profile,
+      environment: "dev",
+    }),
+  });
+  const payload = await parseApiPayload(response);
+  rememberToken(payload.accessToken);
+  $("#gateTokenInput").value = payload.accessToken;
+  setGateMessage(`已签发 ${payload.profile} 演示令牌，正在进入控制台。`, "success");
+  await enterConsoleWithToken(payload.accessToken, true);
+};
+
+const loadSession = async () => {
+  const response = await fetch("/api/v1/console/session", {
+    headers: requestHeaders(),
+  });
+  const session = await parseApiPayload(response);
+  state.session = session;
+  state.environment = session.environment;
+  syncSessionIdentity();
+  return session;
+};
+
 const renderSignals = (overview) => {
   const totalUpstreams = Math.max(overview.totalUpstreams, 1);
   const enabledShare = Math.round((overview.enabledUpstreams / totalUpstreams) * 100);
   const routableShare = Math.round((overview.routableUpstreams / totalUpstreams) * 100);
   const discoverableShare = Math.min(100, overview.discoverableTools * 10);
-  const privilegeShare = isAdminCredential() ? 100 : 55;
+  const privilegeShare = isAdminSession() ? 100 : 55;
 
   $("#overviewSignals").innerHTML = [
     ["注册激活率", `${overview.enabledUpstreams}/${overview.totalUpstreams} 已启用`, enabledShare],
     ["路由就绪率", `${overview.routableUpstreams}/${overview.totalUpstreams} 可路由`, routableShare],
     ["工具暴露率", `${overview.discoverableTools} 个工具可见`, discoverableShare],
-    ["控制平面权限", isAdminCredential() ? "管理员上下文" : "调用方上下文", privilegeShare],
+    ["控制平面权限", isAdminSession() ? "管理员令牌" : "调用方令牌", privilegeShare],
   ]
     .map(
       ([title, detail, percent]) => `
@@ -181,11 +254,11 @@ const loadOverview = async () => {
     `/api/v1/gateway/overview?environment=${encodeURIComponent(state.environment)}`
   );
   $("#overviewCards").innerHTML = [
-    ["调用方", data.callerId, "当前通过网关鉴权的身份"],
-    ["上游总数", data.totalUpstreams, "当前环境下已注册的服务"],
+    ["调用方", data.callerId, "当前通过控制台令牌映射出来的网关身份"],
+    ["上游总数", data.totalUpstreams, "当前环境下已注册的上游服务数"],
     ["已启用", data.enabledUpstreams, "允许参与网关治理的上游"],
     ["可路由", data.routableUpstreams, "健康且可转发的上游"],
-    ["可见工具", data.discoverableTools, "基于当前身份过滤后的工具集"],
+    ["可见工具", data.discoverableTools, "基于令牌权限过滤后的工具集"],
   ]
     .map(
       ([label, value, detail]) => `
@@ -249,7 +322,9 @@ const loadUpstreams = async () => {
 };
 
 const loadTools = async () => {
-  const data = await api(`/api/v1/admin/tools?environment=${encodeURIComponent(state.environment)}`);
+  const data = await api(
+    `/api/v1/admin/tools?environment=${encodeURIComponent(state.environment)}`
+  );
   $("#toolList").innerHTML = table(
     [
       {
@@ -269,8 +344,7 @@ const loadTools = async () => {
       },
       {
         label: "状态",
-        render: (row) =>
-          badge(row.enabled ? "已启用" : "已禁用", row.enabled ? "success" : "danger"),
+        render: (row) => badge(row.enabled ? "已启用" : "已禁用", row.enabled ? "success" : "danger"),
       },
     ],
     data,
@@ -328,7 +402,7 @@ const loadDiscovery = async () => {
             </article>`
         )
         .join("")
-    : emptyState("当前无可见工具", "当前调用方在这个环境下没有工具暴露。");
+    : emptyState("当前无可见工具", "当前令牌在这个环境下没有工具暴露。");
   logActivity("工具发现结果已刷新", `${currentProfile()} 当前可见 ${data.length} 个工具。`);
 };
 
@@ -399,7 +473,7 @@ const invokeTool = async (event) => {
     body: JSON.stringify(body),
   });
   $("#invokeResult").textContent = JSON.stringify(data, null, 2);
-  logActivity("工具调用完成", `${data.toolIdentifier} 对调用方 ${data.callerId} 返回 ${data.status}。`);
+  logActivity("工具调用完成", `${data.toolIdentifier} 返回 ${data.status}。`);
 };
 
 const submitJson = async (path, body) =>
@@ -408,15 +482,151 @@ const submitJson = async (path, body) =>
     body: JSON.stringify(body),
   });
 
-$("#authForm").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  state.environment = $("#environment").value.trim() || "dev";
-  state.authMode = $("#authModeSelect").value;
-  state.credential = $("#credential").value.trim();
-  state.sessionId = $("#sessionId").value.trim();
-  syncIdentity();
-  logActivity("调用方上下文已更新", `已切换到 ${currentProfile()}，环境 ${state.environment}。`, "warn");
+const loadAdminSurfaces = async () => {
+  await Promise.all([loadUpstreams(), loadTools(), loadPolicies(), loadBigMarketOverview()]);
+};
+
+const renderAdminLockedStates = () => {
+  $("#upstreamList").innerHTML = emptyState("需要管理员令牌", "切换到管理员令牌后才能管理上游。");
+  $("#toolList").innerHTML = emptyState("需要管理员令牌", "切换到管理员令牌后才能管理工具。");
+  $("#policyList").innerHTML = emptyState("需要管理员令牌", "切换到管理员令牌后才能管理策略。");
+  $("#bigMarketOverview").innerHTML = emptyState("需要管理员令牌", "切换到管理员令牌后才能控制 big-market。");
+  $("#bigMarketResult").textContent = "当前令牌没有 big-market 控制权限。";
+};
+
+const refreshAll = async () => {
+  try {
+    await loadSession();
+    syncSessionIdentity();
+    showConsole();
+    await loadOverview();
+    if (isAdminSession()) {
+      await loadAdminSurfaces();
+    } else {
+      renderAdminLockedStates();
+    }
+    await loadDiscovery();
+  } catch (error) {
+    clearToken();
+    showGate();
+    setGateMessage(`访问失败：${error.message}`, "error");
+    $("#gateTokenInput").value = "";
+    setStatus("令牌失效", "-");
+  }
+};
+
+const enterConsoleWithToken = async (token, fromIssue = false) => {
+  rememberToken(token);
+  if (!fromIssue) {
+    setGateMessage("令牌验证中，请稍候…", "neutral");
+  }
   await refreshAll();
+  if (state.session) {
+    setGateMessage(`已通过 ${state.session.profile} 令牌进入控制台。`, "success");
+    logActivity(
+      "控制台访问成功",
+      `${state.session.profile} 已进入 ${state.session.environment} 环境控制台。`,
+      "warn"
+    );
+  }
+};
+
+const bootFromExistingToken = async () => {
+  const urlToken = new URL(window.location.href).searchParams.get("token");
+  const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+  const token = urlToken || storedToken;
+  if (!token) {
+    showGate();
+    return;
+  }
+  $("#gateTokenInput").value = token;
+  await enterConsoleWithToken(token);
+};
+
+$("#gateEnterButton").addEventListener("click", async () => {
+  const token = $("#gateTokenInput").value.trim();
+  if (!token) {
+    setGateMessage("请先输入访问令牌。", "error");
+    return;
+  }
+  await enterConsoleWithToken(token);
+});
+
+$("#gateClearButton").addEventListener("click", () => {
+  $("#gateTokenInput").value = "";
+  setGateMessage("支持 URL `?token=...` 自动带入，也会记住本地最近一次令牌。");
+});
+
+$("#issueAdminTokenButton").addEventListener("click", async () => {
+  await issueDemoToken("demo-admin");
+});
+
+$("#issueAppTokenButton").addEventListener("click", async () => {
+  await issueDemoToken("demo-app");
+});
+
+$("#switchAdminTokenButton").addEventListener("click", async () => {
+  await issueDemoToken("demo-admin");
+});
+
+$("#switchAppTokenButton").addEventListener("click", async () => {
+  await issueDemoToken("demo-app");
+});
+
+$("#logoutTokenButton").addEventListener("click", () => {
+  clearToken();
+  showGate();
+  $("#gateTokenInput").value = "";
+  setGateMessage("令牌已清除，请重新输入或重新签发访问令牌。", "warn");
+  $("#bigMarketResult").textContent = "big-market 操作结果会显示在这里。";
+  $("#invokeResult").textContent = "工具调用结果会显示在这里。";
+});
+
+$("#refreshOverview").addEventListener("click", loadOverview);
+$("#loadUpstreams").addEventListener("click", loadUpstreams);
+$("#loadTools").addEventListener("click", loadTools);
+$("#loadPolicies").addEventListener("click", loadPolicies);
+$("#loadDiscovery").addEventListener("click", loadDiscovery);
+$("#bmLoadOverview").addEventListener("click", loadBigMarketOverview);
+
+$("#bmActivityArmory").addEventListener("click", async () => {
+  await runBigMarketAction(
+    "/api/v1/admin/systems/big-market/activity-armory",
+    bigMarketPayload(),
+    "big-market 活动装配"
+  );
+});
+
+$("#bmStrategyArmory").addEventListener("click", async () => {
+  await runBigMarketAction(
+    "/api/v1/admin/systems/big-market/strategy-armory",
+    { strategyId: Number($("#bmStrategyId").value) },
+    "big-market 策略装配"
+  );
+});
+
+$("#bmAwardList").addEventListener("click", async () => {
+  await runBigMarketAction(
+    "/api/v1/admin/systems/big-market/award-list",
+    bigMarketPayload(),
+    "big-market 奖品列表查询"
+  );
+});
+
+$("#bmUserAccount").addEventListener("click", async () => {
+  await runBigMarketAction(
+    "/api/v1/admin/systems/big-market/user-account",
+    bigMarketPayload(),
+    "big-market 活动账户查询"
+  );
+});
+
+$("#bmDraw").addEventListener("click", async () => {
+  await runBigMarketAction(
+    "/api/v1/admin/systems/big-market/draw",
+    bigMarketPayload(),
+    "big-market 执行抽奖"
+  );
 });
 
 $("#upstreamForm").addEventListener("submit", async (event) => {
@@ -485,73 +695,6 @@ $("#invokeForm").addEventListener("submit", async (event) => {
   }
 });
 
-$("#refreshOverview").addEventListener("click", loadOverview);
-$("#loadUpstreams").addEventListener("click", loadUpstreams);
-$("#loadTools").addEventListener("click", loadTools);
-$("#loadPolicies").addEventListener("click", loadPolicies);
-$("#loadDiscovery").addEventListener("click", loadDiscovery);
-$("#bmLoadOverview").addEventListener("click", loadBigMarketOverview);
-
-$("#bmActivityArmory").addEventListener("click", async () => {
-  await runBigMarketAction(
-    "/api/v1/admin/systems/big-market/activity-armory",
-    bigMarketPayload(),
-    "big-market 活动装配"
-  );
-});
-
-$("#bmStrategyArmory").addEventListener("click", async () => {
-  await runBigMarketAction(
-    "/api/v1/admin/systems/big-market/strategy-armory",
-    { strategyId: Number($("#bmStrategyId").value) },
-    "big-market 策略装配"
-  );
-});
-
-$("#bmAwardList").addEventListener("click", async () => {
-  await runBigMarketAction(
-    "/api/v1/admin/systems/big-market/award-list",
-    bigMarketPayload(),
-    "big-market 奖品列表查询"
-  );
-});
-
-$("#bmUserAccount").addEventListener("click", async () => {
-  await runBigMarketAction(
-    "/api/v1/admin/systems/big-market/user-account",
-    bigMarketPayload(),
-    "big-market 活动账户查询"
-  );
-});
-
-$("#bmDraw").addEventListener("click", async () => {
-  await runBigMarketAction(
-    "/api/v1/admin/systems/big-market/draw",
-    bigMarketPayload(),
-    "big-market 执行抽奖"
-  );
-});
-
-$("#useAdmin").addEventListener("click", async () => {
-  state.authMode = "apiKey";
-  state.credential = "demo-admin-key";
-  $("#authModeSelect").value = "apiKey";
-  $("#credential").value = state.credential;
-  syncIdentity();
-  logActivity("身份已切换", "已应用演示管理员预设。", "warn");
-  await refreshAll();
-});
-
-$("#useApp").addEventListener("click", async () => {
-  state.authMode = "apiKey";
-  state.credential = "demo-app-key";
-  $("#authModeSelect").value = "apiKey";
-  $("#credential").value = state.credential;
-  syncIdentity();
-  logActivity("身份已切换", "已应用演示调用方预设。", "warn");
-  await refreshAll();
-});
-
 document.addEventListener("click", async (event) => {
   const button = event.target.closest(".refresh-upstream");
   if (!button) {
@@ -568,35 +711,6 @@ document.addEventListener("click", async (event) => {
   await refreshAll();
 });
 
-const loadAdminSurfaces = async () => {
-  await Promise.all([loadUpstreams(), loadTools(), loadPolicies(), loadBigMarketOverview()]);
-};
-
-const renderAdminLockedStates = () => {
-  $("#upstreamList").innerHTML = emptyState("需要管理员凭证", "切换到演示管理员后才能管理上游。");
-  $("#toolList").innerHTML = emptyState("需要管理员凭证", "切换到演示管理员后才能管理工具。");
-  $("#policyList").innerHTML = emptyState("需要管理员凭证", "切换到演示管理员后才能管理策略。");
-  $("#bigMarketOverview").innerHTML = emptyState("需要管理员凭证", "切换到演示管理员后才能控制 big-market。");
-  $("#bigMarketResult").textContent = "切换到演示管理员后，才能调用 big-market 控制接口。";
-};
-
-const refreshAll = async () => {
-  try {
-    syncIdentity();
-    await loadOverview();
-    if (isAdminCredential()) {
-      await loadAdminSurfaces();
-    } else {
-      renderAdminLockedStates();
-    }
-    await loadDiscovery();
-  } catch (error) {
-    setStatus(error.message, "-");
-    $("#invokeResult").textContent = error.message;
-    logActivity("界面刷新失败", error.message, "error");
-  }
-};
-
-syncIdentity();
+showGate();
 renderActivityFeed();
-refreshAll();
+bootFromExistingToken();

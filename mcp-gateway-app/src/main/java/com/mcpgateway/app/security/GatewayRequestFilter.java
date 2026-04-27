@@ -1,6 +1,8 @@
 package com.mcpgateway.app.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mcpgateway.app.console.ConsoleTokenService;
+import com.mcpgateway.app.console.ConsoleTokenSession;
 import com.mcpgateway.domain.security.model.GatewayClient;
 import com.mcpgateway.domain.security.service.ClientAuthenticationService;
 import com.mcpgateway.types.context.GatewayRequestContext;
@@ -25,19 +27,23 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class GatewayRequestFilter extends OncePerRequestFilter {
 
     private final ClientAuthenticationService clientAuthenticationService;
+    private final ConsoleTokenService consoleTokenService;
     private final ObjectMapper objectMapper;
 
     public GatewayRequestFilter(
             ClientAuthenticationService clientAuthenticationService,
+            ConsoleTokenService consoleTokenService,
             ObjectMapper objectMapper
     ) {
         this.clientAuthenticationService = clientAuthenticationService;
+        this.consoleTokenService = consoleTokenService;
         this.objectMapper = objectMapper;
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !request.getRequestURI().startsWith("/api/");
+        return !request.getRequestURI().startsWith("/api/")
+                || request.getRequestURI().startsWith("/api/v1/public/console/");
     }
 
     @Override
@@ -76,6 +82,13 @@ public class GatewayRequestFilter extends OncePerRequestFilter {
         String bearerToken = extractBearerToken(request.getHeader("Authorization"));
         if (isBlank(apiKey) && isBlank(bearerToken)) {
             throw new AppException(ResponseCode.UNAUTHORIZED, "missing credentials");
+        }
+        if (!isBlank(bearerToken)) {
+            java.util.Optional<ConsoleTokenSession> consoleSession = consoleTokenService.resolve(bearerToken);
+            if (consoleSession.isPresent()) {
+                request.setAttribute(RequestAttributeNames.CONSOLE_TOKEN_SESSION, consoleSession.get());
+                return consoleSession.get().gatewayClient();
+            }
         }
         return clientAuthenticationService.authenticate(apiKey, bearerToken);
     }
@@ -120,4 +133,3 @@ public class GatewayRequestFilter extends OncePerRequestFilter {
         return value == null || value.isBlank();
     }
 }
-
