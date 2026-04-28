@@ -23,10 +23,10 @@ export class StdioTransport implements McpTransport {
   }
 
   async send(message: JsonRpcRequest | JsonRpcNotification) {
-    void message;
+    const payload = JSON.stringify(message);
     this.handlers.onError?.(
       new Error(
-        "Stdio transport is not supported in the browser runtime."
+        `Stdio transport is not supported in the browser runtime. Attempted to send: ${payload}`
       )
     );
   }
