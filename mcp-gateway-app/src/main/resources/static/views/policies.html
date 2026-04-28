@@ -1,0 +1,112 @@
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-3 mb-4 border-bottom">
+    <h1 class="page-title">访问策略</h1>
+    <div>
+        <button class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1 me-2" id="refreshPoliciesBtn">
+            <i class="bi bi-arrow-clockwise"></i> 刷新数据
+        </button>
+        <button class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#policyModal">
+            <i class="bi bi-plus-lg"></i> 新增策略
+        </button>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form id="form-policy-search" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label text-muted small mb-1">主体标识</label>
+                <input type="text" class="form-control form-control-sm" id="search-policy-subject" placeholder="如 demo-app">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label text-muted small mb-1">工具标识</label>
+                <input type="text" class="form-control form-control-sm" id="search-policy-tool" placeholder="如 weather:forecast">
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary btn-sm me-2"><i class="bi bi-search"></i> 筛选</button>
+                <button type="button" class="btn btn-light btn-sm" id="resetPolicySearchBtn"><i class="bi bi-arrow-counterclockwise"></i> 重置</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                <tr>
+                    <th>主体</th>
+                    <th>工具标识</th>
+                    <th>决策</th>
+                    <th>状态</th>
+                    <th>原因</th>
+                </tr>
+                </thead>
+                <tbody id="policyTableBody">
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">
+                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                        加载中...
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="policyModal" tabindex="-1" aria-labelledby="policyModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="policyModalLabel"><i class="bi bi-shield-lock me-2"></i>新增访问策略</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="policyForm">
+                    <div class="mb-3">
+                        <label class="form-label">主体类型</label>
+                        <select class="form-select" name="subjectType">
+                            <option value="CLIENT">CLIENT</option>
+                            <option value="ROLE">ROLE</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">主体标识 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="subjectId" required placeholder="如 demo-app 或 APP">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">工具标识 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="toolIdentifier" required placeholder="如 weather:forecast">
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">决策</label>
+                            <select class="form-select" name="decision">
+                                <option value="ALLOW">ALLOW</option>
+                                <option value="DENY">DENY</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mt-3 mt-md-0">
+                            <label class="form-label">状态</label>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" role="switch" id="policy-enabled" name="enabled" checked>
+                                <label class="form-check-label" for="policy-enabled">保存后立即生效</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">原因</label>
+                        <input type="text" class="form-control" name="reason" placeholder="例如：仅允许演示调用方">
+                    </div>
+                    <div class="modal-footer px-0 pb-0 border-0">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-1">
+                            <i class="bi bi-check2-circle"></i> 保存配置
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,808 +1,1039 @@
-const TOKEN_STORAGE_KEY = "mcp_console_access_token";
+const MCP_HISTORY_KEY = "mcp_gateway_workspace_mcp_history";
+
+function loadMcpHistory() {
+    try {
+        const raw = localStorage.getItem(MCP_HISTORY_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch (error) {
+        return [];
+    }
+}
 
 const state = {
-  accessToken: "",
-  environment: "dev",
-  sessionId: "",
-  session: null,
-  activities: [],
-};
-
-const $ = (selector) => document.querySelector(selector);
-
-const timeStamp = () =>
-  new Date().toLocaleTimeString("zh-CN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-
-const escapeHtml = (value) =>
-  String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-
-const emptyState = (title, detail) =>
-  `<div class="empty-state"><div><strong>${escapeHtml(title)}</strong><small>${escapeHtml(
-    detail
-  )}</small></div></div>`;
-
-const badge = (label, tone = "neutral") =>
-  `<span class="badge badge-${tone}">${escapeHtml(label)}</span>`;
-
-const table = (columns, rows, emptyTitle, emptyDetail) => {
-  if (!rows.length) {
-    return emptyState(emptyTitle, emptyDetail);
-  }
-  const head = columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("");
-  const body = rows
-    .map((row) => `<tr>${columns.map((column) => `<td>${column.render(row)}</td>`).join("")}</tr>`)
-    .join("");
-  return `<table class="table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
-};
-
-const isAdminSession = () =>
-  Boolean(state.session && Array.isArray(state.session.roles) && state.session.roles.includes("ADMIN"));
-
-const hasScope = (scope) =>
-  Boolean(state.session && Array.isArray(state.session.scopes) && state.session.scopes.includes(scope));
-
-const managesSystem = (systemName) =>
-  Boolean(
-    state.session &&
-      Array.isArray(state.session.managedSystems) &&
-      state.session.managedSystems.includes(systemName)
-  );
-
-const currentProfile = () => (state.session?.profile ? state.session.profile : "未认证");
-
-const setStatus = (message, requestId = "-") => {
-  $("#statusText").textContent = message || "就绪";
-  $("#requestText").textContent = requestId || "-";
-};
-
-const setGateMessage = (message, tone = "neutral") => {
-  const el = $("#gateMessage");
-  el.textContent = message;
-  el.dataset.tone = tone;
-};
-
-const rememberToken = (token) => {
-  state.accessToken = token;
-  localStorage.setItem(TOKEN_STORAGE_KEY, token);
-};
-
-const clearToken = () => {
-  state.accessToken = "";
-  state.session = null;
-  localStorage.removeItem(TOKEN_STORAGE_KEY);
-};
-
-const requestHeaders = () => ({
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${state.accessToken}`,
-});
-
-const logActivity = (title, detail, tone = "info") => {
-  state.activities.unshift({
-    title,
-    detail,
-    tone,
-    time: timeStamp(),
-  });
-  state.activities = state.activities.slice(0, 14);
-  renderActivityFeed();
-};
-
-const renderActivityFeed = () => {
-  const container = $("#activityFeed");
-  if (!container) {
-    return;
-  }
-  if (!state.activities.length) {
-    container.innerHTML = emptyState("暂无事件", "加载数据或执行操作后，这里会出现事件流。");
-    return;
-  }
-  container.innerHTML = state.activities
-    .map(
-      (entry) => `
-        <article class="activity-line ${entry.tone === "warn" ? "warn" : entry.tone === "error" ? "error" : ""}">
-          <div class="activity-time">${escapeHtml(entry.time)}</div>
-          <div class="activity-dot"></div>
-          <div>
-            <strong>${escapeHtml(entry.title)}</strong>
-            <small>${escapeHtml(entry.detail)}</small>
-          </div>
-        </article>`
-    )
-    .join("");
-};
-
-const showGate = () => {
-  $("#accessGate").classList.remove("hidden");
-  $("#consoleApp").classList.add("hidden");
-};
-
-const showConsole = () => {
-  $("#accessGate").classList.add("hidden");
-  $("#consoleApp").classList.remove("hidden");
-};
-
-const syncSessionIdentity = () => {
-  if (!state.session) {
-    return;
-  }
-  $("#activeProfile").textContent = state.session.profile;
-  $("#activeCredential").textContent = `${state.accessToken.slice(0, 16)}...`;
-  $("#activeEnvironment").textContent = state.session.environment;
-  $("#activeRoles").textContent = state.session.roles.join(", ");
-  $("#activeExpiresAt").textContent = new Date(state.session.expiresAt).toLocaleString("zh-CN");
-  $("#sessionRibbon").innerHTML = [
-    ["当前身份", state.session.profile],
-    ["令牌范围", state.session.scopes.join(", ")],
-    ["系统范围", state.session.managedSystems.join(", ")],
-    ["过期时间", new Date(state.session.expiresAt).toLocaleString("zh-CN")],
-  ]
-    .map(
-      ([label, value]) => `
-        <article class="session-chip">
-          <span>${escapeHtml(label)}</span>
-          <strong>${escapeHtml(value)}</strong>
-        </article>`
-    )
-    .join("");
-  $("#tokenContextPanel").innerHTML = [
-    ["访问画像", state.session.profile, "当前控制台令牌绑定的调用方身份"],
-    ["令牌编号", state.session.tokenId, "可用于撤销、审计和问题排查"],
-    ["权限角色", state.session.roles.join(", "), "决定可访问模块与动作范围"],
-    ["权限范围", state.session.scopes.join(", "), "基于 scope 控制模块与动作能力"],
-    ["系统范围", state.session.managedSystems.join(", "), "当前令牌允许访问的受管系统"],
-    ["令牌环境", state.session.environment, "控制台默认作用的网关环境"],
-    ["过期时间", new Date(state.session.expiresAt).toLocaleString("zh-CN"), "令牌过期后需要重新签发"],
-  ]
-    .map(
-      ([label, value, detail]) => `
-        <div class="metric-card">
-          <span>${escapeHtml(label)}</span>
-          <strong>${escapeHtml(value)}</strong>
-          <small>${escapeHtml(detail)}</small>
-        </div>`
-    )
-    .join("");
-};
-
-const updateActionPermissions = () => {
-  const canOperateBigMarket =
-    hasScope("system:big-market:operate") && managesSystem("big-market-71772-z");
-  [
-    "#bmActivityArmory",
-    "#bmStrategyArmory",
-    "#bmAwardList",
-    "#bmUserAccount",
-    "#bmDraw",
-  ].forEach((selector) => {
-    const button = $(selector);
-    if (!button) {
-      return;
+    currentView: "dashboard",
+    session: null,
+    overview: null,
+    upstreams: [],
+    tools: [],
+    policies: [],
+    bigMarket: null,
+    lastRequestId: "-",
+    mcp: {
+        source: null,
+        postUrl: null,
+        status: "idle",
+        statusText: "未连接",
+        tools: [],
+        selectedTool: null,
+        traffic: [],
+        result: "MCP 调用结果会显示在这里。",
+        history: loadMcpHistory(),
+        pending: new Map()
     }
-    const needsOperate = selector === "#bmActivityArmory" || selector === "#bmStrategyArmory" || selector === "#bmDraw";
-    const enabled = needsOperate
-      ? canOperateBigMarket
-      : hasScope("system:big-market:read") && managesSystem("big-market-71772-z");
-    button.disabled = !enabled;
-    button.title = enabled ? "" : "当前令牌没有这个操作权限";
-  });
 };
 
-const parseApiPayload = async (response) => {
-  const payload = await response.json();
-  const requestId = payload.requestId || response.headers.get("X-Request-Id");
-  setStatus(payload.message, requestId);
-  if (!response.ok) {
-    throw new Error(payload.message || `请求失败: ${response.status}`);
-  }
-  return payload.data;
-};
+$(document).ready(function () {
+    if (!window.MCPGateway.readAuth()) {
+        window.location.href = "/";
+        return;
+    }
 
-const api = async (path, options = {}) => {
-  const response = await fetch(path, {
-    ...options,
-    headers: {
-      ...requestHeaders(),
-      ...(options.headers || {}),
-    },
-  });
-  return parseApiPayload(response);
-};
-
-const issueDemoToken = async (profile) => {
-  const response = await fetch("/api/v1/public/console/tokens/demo", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      profile,
-      environment: "dev",
-    }),
-  });
-  const payload = await parseApiPayload(response);
-  rememberToken(payload.accessToken);
-  $("#gateTokenInput").value = payload.accessToken;
-  setGateMessage(`已签发 ${payload.profile} 演示令牌，正在进入控制台。`, "success");
-  await enterConsoleWithToken(payload.accessToken, true);
-};
-
-const loadSession = async () => {
-  const response = await fetch("/api/v1/console/session", {
-    headers: requestHeaders(),
-  });
-  const session = await parseApiPayload(response);
-  state.session = session;
-  state.environment = session.environment;
-  syncSessionIdentity();
-  return session;
-};
-
-const renderSignals = (overview) => {
-  const totalUpstreams = Math.max(overview.totalUpstreams, 1);
-  const enabledShare = Math.round((overview.enabledUpstreams / totalUpstreams) * 100);
-  const routableShare = Math.round((overview.routableUpstreams / totalUpstreams) * 100);
-  const discoverableShare = Math.min(100, overview.discoverableTools * 10);
-  const privilegeShare = isAdminSession() ? 100 : 55;
-
-  $("#overviewSignals").innerHTML = [
-    ["注册激活率", `${overview.enabledUpstreams}/${overview.totalUpstreams} 已启用`, enabledShare],
-    ["路由就绪率", `${overview.routableUpstreams}/${overview.totalUpstreams} 可路由`, routableShare],
-    ["工具暴露率", `${overview.discoverableTools} 个工具可见`, discoverableShare],
-    ["控制平面权限", isAdminSession() ? "管理员令牌" : "调用方令牌", privilegeShare],
-  ]
-    .map(
-      ([title, detail, percent]) => `
-        <div class="signal-line">
-          <div class="signal-line-head">
-            <strong>${escapeHtml(title)}</strong>
-            <small>${escapeHtml(detail)}</small>
-          </div>
-          <div class="signal-bar"><span style="width:${percent}%"></span></div>
-        </div>`
-    )
-    .join("");
-};
-
-const renderHealthGrid = (servers) => {
-  $("#overviewServers").innerHTML = servers.length
-    ? servers
-        .map(
-          (server) => `
-            <article class="health-card">
-              <strong>${escapeHtml(server.serverCode)}</strong>
-              <small>${escapeHtml(server.name)} · ${escapeHtml(server.transportType)}</small>
-              <small>${escapeHtml(server.baseUrl)}</small>
-              <footer>
-                ${badge(server.enabled ? "已启用" : "已禁用", server.enabled ? "success" : "danger")}
-                ${badge(
-                  server.healthStatus,
-                  server.healthStatus === "UP"
-                    ? "success"
-                    : server.healthStatus === "DOWN"
-                    ? "danger"
-                    : "neutral"
-                )}
-              </footer>
-            </article>`
-        )
-        .join("")
-    : emptyState("暂无启用上游", "先注册并刷新上游，才能进入路由可用态。");
-};
-
-const loadOverview = async () => {
-  const data = await api(
-    `/api/v1/gateway/overview?environment=${encodeURIComponent(state.environment)}`
-  );
-  $("#overviewCards").innerHTML = [
-    ["调用方", data.callerId, "当前通过控制台令牌映射出来的网关身份"],
-    ["上游总数", data.totalUpstreams, "当前环境下已注册的上游服务数"],
-    ["已启用", data.enabledUpstreams, "允许参与网关治理的上游"],
-    ["可路由", data.routableUpstreams, "健康且可转发的上游"],
-    ["可见工具", data.discoverableTools, "基于令牌权限过滤后的工具集"],
-  ]
-    .map(
-      ([label, value, detail]) => `
-        <div class="metric-card">
-          <span>${escapeHtml(label)}</span>
-          <strong>${escapeHtml(value)}</strong>
-          <small>${escapeHtml(detail)}</small>
-        </div>`
-    )
-    .join("");
-
-  renderSignals(data);
-  renderHealthGrid(data.enabledServers);
-  logActivity("网关总览已刷新", `${data.callerId} 在 ${state.environment} 环境可见 ${data.discoverableTools} 个工具。`);
-};
-
-const loadUpstreams = async () => {
-  const data = await api(
-    `/api/v1/admin/upstreams?environment=${encodeURIComponent(state.environment)}`
-  );
-  $("#upstreamList").innerHTML = table(
-    [
-      {
-        label: "服务",
-        render: (row) =>
-          `<strong>${escapeHtml(row.serverCode)}</strong><br><small>${escapeHtml(row.name)}</small>`,
-      },
-      {
-        label: "地址",
-        render: (row) =>
-          `<code>${escapeHtml(row.baseUrl)}</code><br><small>${escapeHtml(row.transportType)} · ${escapeHtml(
-            row.authMode
-          )}</small>`,
-      },
-      {
-        label: "状态",
-        render: (row) =>
-          `${badge(row.enabled ? "已启用" : "已禁用", row.enabled ? "success" : "danger")}
-           ${badge(
-             row.healthStatus,
-             row.healthStatus === "UP"
-               ? "success"
-               : row.healthStatus === "DOWN"
-               ? "danger"
-               : "neutral"
-           )}`,
-      },
-      {
-        label: "操作",
-        render: (row) =>
-          `<button class="inline-button refresh-upstream" data-server="${escapeHtml(
-            row.serverCode
-          )}">刷新健康状态</button>`,
-      },
-    ],
-    data,
-    "暂无上游服务",
-    "可以先从左侧表单注册一个上游服务。"
-  );
-  logActivity("上游注册表已加载", `共加载 ${data.length} 条上游记录。`);
-};
-
-const loadTools = async () => {
-  const data = await api(
-    `/api/v1/admin/tools?environment=${encodeURIComponent(state.environment)}`
-  );
-  $("#toolList").innerHTML = table(
-    [
-      {
-        label: "工具",
-        render: (row) =>
-          `<strong>${escapeHtml(row.toolName)}</strong><br><small>${escapeHtml(
-            row.toolIdentifier
-          )}</small>`,
-      },
-      {
-        label: "服务",
-        render: (row) => badge(row.serverCode, "neutral"),
-      },
-      {
-        label: "描述",
-        render: (row) => escapeHtml(row.description || "-"),
-      },
-      {
-        label: "状态",
-        render: (row) => badge(row.enabled ? "已启用" : "已禁用", row.enabled ? "success" : "danger"),
-      },
-    ],
-    data,
-    "暂无工具定义",
-    "至少存在一个上游服务后，再注册工具定义。"
-  );
-  logActivity("工具目录已加载", `共加载 ${data.length} 个工具定义。`);
-};
-
-const loadPolicies = async () => {
-  const data = await api(
-    `/api/v1/admin/policies?environment=${encodeURIComponent(state.environment)}`
-  );
-  $("#policyList").innerHTML = table(
-    [
-      {
-        label: "主体",
-        render: (row) =>
-          `<strong>${escapeHtml(row.subjectId)}</strong><br><small>${escapeHtml(
-            row.subjectType
-          )}</small>`,
-      },
-      {
-        label: "工具",
-        render: (row) => `<code>${escapeHtml(row.toolIdentifier)}</code>`,
-      },
-      {
-        label: "决策",
-        render: (row) =>
-          badge(row.decision === "ALLOW" ? "允许" : "拒绝", row.decision === "ALLOW" ? "success" : "danger"),
-      },
-      {
-        label: "原因",
-        render: (row) => escapeHtml(row.reason || "-"),
-      },
-    ],
-    data,
-    "暂无访问策略",
-    "可以按调用方或角色添加允许/拒绝规则。"
-  );
-  logActivity("策略矩阵已加载", `共加载 ${data.length} 条访问控制策略。`);
-};
-
-const loadDiscovery = async () => {
-  const data = await api(
-    `/api/v1/gateway/tools?environment=${encodeURIComponent(state.environment)}`
-  );
-  $("#discoveryList").innerHTML = data.length
-    ? data
-        .map(
-          (tool) => `
-            <article class="tool-card">
-              <strong>${escapeHtml(tool.toolIdentifier)}</strong>
-              <small>${escapeHtml(tool.description || "暂无描述")}</small>
-            </article>`
-        )
-        .join("")
-    : emptyState("当前无可见工具", "当前令牌在这个环境下没有工具暴露。");
-  logActivity("工具发现结果已刷新", `${currentProfile()} 当前可见 ${data.length} 个工具。`);
-};
-
-const loadBigMarketOverview = async () => {
-  const data = await api("/api/v1/admin/systems/big-market");
-  $("#bigMarketOverview").innerHTML = `
-    <div class="metric-card">
-      <span>系统名称</span>
-      <strong>${escapeHtml(data.systemName)}</strong>
-      <small>通过 MCP 网关代理控制的业务系统</small>
-    </div>
-    <div class="metric-card">
-      <span>仓库路径</span>
-      <strong>${escapeHtml(data.repoPath)}</strong>
-      <small>本地项目目录</small>
-    </div>
-    <div class="metric-card">
-      <span>基础地址</span>
-      <strong>${escapeHtml(data.baseUrl)}</strong>
-      <small>big-market HTTP 入口</small>
-    </div>
-    <div class="metric-card">
-      <span>可达性</span>
-      <strong>${data.reachable ? "在线" : "离线"}</strong>
-      <small>${data.reachable ? "8091 服务可访问" : "请先启动 big-market 服务"}</small>
-    </div>
-    <div class="metric-card">
-      <span>已接操作</span>
-      <strong>${data.supportedOperations.length}</strong>
-      <small>${escapeHtml(data.supportedOperations.join(" / "))}</small>
-    </div>`;
-  logActivity(
-    "受管系统状态已刷新",
-    `${data.systemName} 当前${data.reachable ? "在线" : "离线"}，地址 ${data.baseUrl}。`,
-    data.reachable ? "info" : "warn"
-  );
-};
-
-const bigMarketPayload = () => ({
-  userId: $("#bmUserId").value.trim(),
-  activityId: Number($("#bmActivityId").value),
+    syncAuthSummaryLabel();
+    bindShellEvents();
+    loadView("dashboard");
 });
 
-const runBigMarketAction = async (path, body, title) => {
-  try {
-    const data = await api(path, {
-      method: "POST",
-      body: JSON.stringify(body),
+function bindShellEvents() {
+    $("#logoutBtn").on("click", async function (event) {
+        event.preventDefault();
+        try {
+            await apiPost(window.MCPGateway.config.endpoints.revoke, {});
+        } catch (error) {
+            // Ignore revoke failure; local logout still matters.
+        } finally {
+            cleanupMcpConnection();
+            window.MCPGateway.clearAuth();
+            window.location.href = "/";
+        }
     });
-    $("#bigMarketResult").textContent = JSON.stringify(data, null, 2);
-    logActivity(title, `${data.message || "操作完成"} · ${data.targetPath}`, "warn");
-  } catch (error) {
-    $("#bigMarketResult").textContent = error.message;
-    logActivity(title, error.message, "error");
-  }
-};
 
-const invokeTool = async (event) => {
-  event.preventDefault();
-  const formData = new FormData(event.currentTarget);
-  const body = {
-    environment: state.environment,
-    toolIdentifier: formData.get("toolIdentifier"),
-    arguments: JSON.parse(formData.get("arguments")),
-  };
-  const data = await api("/api/v1/gateway/tools/invoke", {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
-  $("#invokeResult").textContent = JSON.stringify(data, null, 2);
-  logActivity("工具调用完成", `${data.toolIdentifier} 返回 ${data.status}。`);
-};
+    $(".nav-link[data-target]").on("click", function (event) {
+        event.preventDefault();
+        const targetId = $(this).data("target");
+        $(".nav-link").removeClass("active");
+        $(this).addClass("active");
+        loadView(targetId);
+    });
+}
 
-const submitJson = async (path, body) =>
-  api(path, {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
-
-const loadAdminSurfaces = async () => {
-  const tasks = [];
-  if (hasScope("upstream:manage")) {
-    tasks.push(loadUpstreams());
-  } else {
-    $("#upstreamList").innerHTML = emptyState("缺少 upstream:manage", "当前令牌没有上游资源管理权限。");
-  }
-  if (hasScope("tools:manage")) {
-    tasks.push(loadTools());
-  } else {
-    $("#toolList").innerHTML = emptyState("缺少 tools:manage", "当前令牌没有工具目录管理权限。");
-  }
-  if (hasScope("policies:manage")) {
-    tasks.push(loadPolicies());
-  } else {
-    $("#policyList").innerHTML = emptyState("缺少 policies:manage", "当前令牌没有策略管理权限。");
-  }
-  if (hasScope("system:big-market:read") && managesSystem("big-market-71772-z")) {
-    tasks.push(loadBigMarketOverview());
-  } else {
-    $("#bigMarketOverview").innerHTML = emptyState(
-      "缺少系统读取权限",
-      "当前令牌没有 big-market-71772-z 的读取范围。"
+function syncAuthSummaryLabel() {
+    $("#authSummaryLabel").html(
+        `<i class="bi bi-person-circle"></i> ${escapeHtml(window.MCPGateway.authLabel())}`
     );
-    $("#bigMarketResult").textContent = "当前令牌没有 big-market 控制权限。";
-  }
-  await Promise.all(tasks);
-};
+}
 
-const renderAdminLockedStates = () => {
-  $("#upstreamList").innerHTML = emptyState("缺少 upstream:manage", "当前令牌没有上游资源管理权限。");
-  $("#toolList").innerHTML = emptyState("缺少 tools:manage", "当前令牌没有工具目录管理权限。");
-  $("#policyList").innerHTML = emptyState("缺少 policies:manage", "当前令牌没有策略管理权限。");
-  $("#bigMarketOverview").innerHTML = emptyState(
-    "缺少系统读取权限",
-    "当前令牌没有 big-market-71772-z 的读取范围。"
-  );
-  $("#bigMarketResult").textContent = "当前令牌没有 big-market 控制权限。";
-};
+function loadView(targetId) {
+    state.currentView = targetId;
+    const viewPath = `/views/${targetId}.html`;
+    $("#main-content-wrapper").html(
+        '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><div class="mt-2 text-muted">加载中...</div></div>'
+    );
 
-const refreshAll = async () => {
-  try {
-    await loadSession();
-    syncSessionIdentity();
-    updateActionPermissions();
-    showConsole();
-    await loadOverview();
-    if (hasScope("upstream:manage") || hasScope("tools:manage") || hasScope("policies:manage") || hasScope("system:big-market:read")) {
-      await loadAdminSurfaces();
-    } else {
-      renderAdminLockedStates();
+    $("#main-content-wrapper").load(viewPath, function (response, status, xhr) {
+        if (status === "error") {
+            $("#main-content-wrapper").html(
+                `<div class="alert alert-danger m-4">页面加载失败：${xhr.status} ${xhr.statusText}</div>`
+            );
+            return;
+        }
+        initViewLogic(targetId);
+    });
+}
+
+function initViewLogic(targetId) {
+    if (targetId === "dashboard") {
+        initDashboard();
+        return;
     }
-    await loadDiscovery();
-  } catch (error) {
-    clearToken();
-    showGate();
-    setGateMessage(`访问失败：${error.message}`, "error");
-    $("#gateTokenInput").value = "";
-    setStatus("令牌失效", "-");
-  }
-};
+    if (targetId === "upstreams") {
+        initUpstreamsView();
+        return;
+    }
+    if (targetId === "tools") {
+        initToolsView();
+        return;
+    }
+    if (targetId === "policies") {
+        initPoliciesView();
+        return;
+    }
+    if (targetId === "big-market") {
+        initBigMarketView();
+        return;
+    }
+    if (targetId === "mcp-lab") {
+        initMcpLabView();
+    }
+}
 
-const enterConsoleWithToken = async (token, fromIssue = false) => {
-  rememberToken(token);
-  if (!fromIssue) {
-    setGateMessage("令牌验证中，请稍候…", "neutral");
-  }
-  await refreshAll();
-  if (state.session) {
-    setGateMessage(`已通过 ${state.session.profile} 令牌进入控制台。`, "success");
-    logActivity(
-      "控制台访问成功",
-      `${state.session.profile} 已进入 ${state.session.environment} 环境控制台。`,
-      "warn"
-    );
-  }
-};
+function apiGet(url, data) {
+    return apiRequest(url, "GET", data);
+}
 
-const bootFromExistingToken = async () => {
-  const urlToken = new URL(window.location.href).searchParams.get("token");
-  const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
-  const token = urlToken || storedToken;
-  if (!token) {
-    showGate();
-    return;
-  }
-  $("#gateTokenInput").value = token;
-  await enterConsoleWithToken(token);
-};
+function apiPost(url, data) {
+    return apiRequest(url, "POST", data);
+}
 
-$("#gateEnterButton").addEventListener("click", async () => {
-  const token = $("#gateTokenInput").value.trim();
-  if (!token) {
-    setGateMessage("请先输入访问令牌。", "error");
-    return;
-  }
-  await enterConsoleWithToken(token);
-});
-
-$("#gateClearButton").addEventListener("click", () => {
-  $("#gateTokenInput").value = "";
-  setGateMessage("支持 URL `?token=...` 自动带入，也会记住本地最近一次令牌。");
-});
-
-$("#issueAdminTokenButton").addEventListener("click", async () => {
-  await issueDemoToken("demo-admin");
-});
-
-$("#issueAppTokenButton").addEventListener("click", async () => {
-  await issueDemoToken("demo-app");
-});
-
-$("#switchAdminTokenButton").addEventListener("click", async () => {
-  await issueDemoToken("demo-admin");
-});
-
-$("#switchAppTokenButton").addEventListener("click", async () => {
-  await issueDemoToken("demo-app");
-});
-
-$("#logoutTokenButton").addEventListener("click", () => {
-  (async () => {
-    try {
-      if (state.accessToken) {
-        await api("/api/v1/console/tokens/revoke", {
-          method: "POST",
-          body: JSON.stringify({}),
+function apiRequest(url, method, data) {
+    return new Promise((resolve, reject) => {
+        $.ajax({
+            url,
+            type: method,
+            data: method === "GET" ? data : JSON.stringify(data || {}),
+            contentType: method === "GET" ? undefined : "application/json",
+            headers: window.MCPGateway.authHeaders(),
+            success(response, _textStatus, xhr) {
+                state.lastRequestId = xhr.getResponseHeader("X-Request-Id") || response.requestId || "-";
+                if (!response || response.code !== "0000") {
+                    reject(new Error(response && response.message ? response.message : "请求失败"));
+                    return;
+                }
+                resolve(response.data);
+            },
+            error(xhr) {
+                const message =
+                    (xhr.responseJSON && xhr.responseJSON.message) ||
+                    (xhr.responseJSON && xhr.responseJSON.error && xhr.responseJSON.error.message) ||
+                    xhr.statusText ||
+                    "网络请求失败";
+                reject(new Error(message));
+            }
         });
-      }
-    } catch (error) {
-      logActivity("令牌撤销失败", error.message, "error");
-    } finally {
-      clearToken();
-      showGate();
-      $("#gateTokenInput").value = "";
-      setGateMessage("令牌已撤销，请重新输入或重新签发访问令牌。", "warn");
-      $("#bigMarketResult").textContent = "big-market 操作结果会显示在这里。";
-      $("#invokeResult").textContent = "工具调用结果会显示在这里。";
+    });
+}
+
+async function ensureSession(force = false) {
+    if (state.session && !force) {
+        return state.session;
     }
-  })();
-});
+    try {
+        state.session = await apiGet(window.MCPGateway.config.endpoints.session);
+        syncAuthSummaryLabel();
+        return state.session;
+    } catch (error) {
+        showToast("当前 Token 已失效，请重新进入工作台", false);
+        window.MCPGateway.clearAuth();
+        window.location.href = "/";
+        throw error;
+    }
+}
 
-$("#refreshOverview").addEventListener("click", loadOverview);
-$("#loadUpstreams").addEventListener("click", loadUpstreams);
-$("#loadTools").addEventListener("click", loadTools);
-$("#loadPolicies").addEventListener("click", loadPolicies);
-$("#loadDiscovery").addEventListener("click", loadDiscovery);
-$("#bmLoadOverview").addEventListener("click", loadBigMarketOverview);
+function currentEnvironment() {
+    return window.MCPGateway.currentEnvironment();
+}
 
-$("#bmActivityArmory").addEventListener("click", async () => {
-  await runBigMarketAction(
-    "/api/v1/admin/systems/big-market/activity-armory",
-    bigMarketPayload(),
-    "big-market 活动装配"
-  );
-});
+function formatDateTime(value) {
+    if (!value) {
+        return "-";
+    }
+    try {
+        return new Date(value).toLocaleString("zh-CN");
+    } catch (error) {
+        return value;
+    }
+}
 
-$("#bmStrategyArmory").addEventListener("click", async () => {
-  await runBigMarketAction(
-    "/api/v1/admin/systems/big-market/strategy-armory",
-    { strategyId: Number($("#bmStrategyId").value) },
-    "big-market 策略装配"
-  );
-});
+function escapeHtml(value) {
+    return $("<div>").text(value == null ? "" : String(value)).html();
+}
 
-$("#bmAwardList").addEventListener("click", async () => {
-  await runBigMarketAction(
-    "/api/v1/admin/systems/big-market/award-list",
-    bigMarketPayload(),
-    "big-market 奖品列表查询"
-  );
-});
+function showToast(message, isSuccess = true) {
+    const toastEl = $("#liveToast");
+    const iconHtml = isSuccess
+        ? '<i class="bi bi-check-circle-fill"></i>'
+        : '<i class="bi bi-exclamation-triangle-fill"></i>';
 
-$("#bmUserAccount").addEventListener("click", async () => {
-  await runBigMarketAction(
-    "/api/v1/admin/systems/big-market/user-account",
-    bigMarketPayload(),
-    "big-market 活动账户查询"
-  );
-});
+    $("#toastMessage").html(`${iconHtml} <span>${escapeHtml(message)}</span>`);
+    if (isSuccess) {
+        toastEl.removeClass("bg-danger").addClass("bg-success");
+    } else {
+        toastEl.removeClass("bg-success").addClass("bg-danger");
+    }
+    bootstrap.Toast.getOrCreateInstance(toastEl[0]).show();
+}
 
-$("#bmDraw").addEventListener("click", async () => {
-  await runBigMarketAction(
-    "/api/v1/admin/systems/big-market/draw",
-    bigMarketPayload(),
-    "big-market 执行抽奖"
-  );
-});
+function buildScopeBadges(scopes) {
+    if (!scopes || !scopes.length) {
+        return '<span class="badge bg-secondary-subtle text-secondary">无 scopes</span>';
+    }
+    return scopes
+        .map((scope) => `<span class="tool-chip">${escapeHtml(scope)}</span>`)
+        .join("");
+}
 
-$("#upstreamForm").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const formData = new FormData(event.currentTarget);
-  await submitJson("/api/v1/admin/upstreams", {
-    environment: state.environment,
-    serverCode: formData.get("serverCode"),
-    name: formData.get("name"),
-    baseUrl: formData.get("baseUrl"),
-    transportType: formData.get("transportType"),
-    authMode: formData.get("authMode"),
-    enabled: formData.get("enabled") === "on",
-    timeoutMs: Number(formData.get("timeoutMs") || 3000),
-  });
-  logActivity("上游服务已注册", `${formData.get("serverCode")} 已加入环境 ${state.environment}。`);
-  event.currentTarget.reset();
-  await refreshAll();
-});
+function renderStateMessage(selector, message, tone = "muted") {
+    const toneClass = tone === "danger" ? "text-danger" : "text-muted";
+    const $target = $(selector);
+    if (!$target.length) {
+        return;
+    }
+    const tagName = ($target.prop("tagName") || "").toLowerCase();
+    if (tagName === "tbody") {
+        const columnCount = $target.closest("table").find("thead th").length || 1;
+        $target.html(
+            `<tr><td colspan="${columnCount}" class="text-center ${toneClass} py-4"><i class="bi bi-info-circle me-2"></i>${escapeHtml(message)}</td></tr>`
+        );
+        return;
+    }
+    $target.html(
+        `<div class="text-center ${toneClass} py-4"><i class="bi bi-info-circle me-2"></i>${escapeHtml(message)}</div>`
+    );
+}
 
-$("#toolForm").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const formData = new FormData(event.currentTarget);
-  await submitJson("/api/v1/admin/tools", {
-    environment: state.environment,
-    serverCode: formData.get("serverCode"),
-    toolName: formData.get("toolName"),
-    description: formData.get("description"),
-    inputSchema: formData.get("inputSchema"),
-    enabled: formData.get("enabled") === "on",
-  });
-  logActivity(
-    "工具定义已注册",
-    `${formData.get("serverCode")}:${formData.get("toolName")} 已加入工具目录。`
-  );
-  event.currentTarget.reset();
-  await refreshAll();
-});
+async function initDashboard() {
+    $("#current-date").text(new Date().toLocaleDateString("zh-CN", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+    }));
 
-$("#policyForm").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const formData = new FormData(event.currentTarget);
-  await submitJson("/api/v1/admin/policies", {
-    environment: state.environment,
-    subjectType: formData.get("subjectType"),
-    subjectId: formData.get("subjectId"),
-    toolIdentifier: formData.get("toolIdentifier"),
-    decision: formData.get("decision"),
-    enabled: formData.get("enabled") === "on",
-    reason: formData.get("reason"),
-  });
-  logActivity(
-    "访问策略已保存",
-    `${formData.get("subjectId")} 对 ${formData.get("toolIdentifier")} 的策略已更新。`
-  );
-  event.currentTarget.reset();
-  await refreshAll();
-});
+    $("#refreshDashboardBtn").off("click").on("click", initDashboard);
 
-$("#invokeForm").addEventListener("submit", async (event) => {
-  try {
-    await invokeTool(event);
-  } catch (error) {
-    $("#invokeResult").textContent = error.message;
-    logActivity("工具调用失败", error.message, "error");
-  }
-});
+    const session = await ensureSession();
+    try {
+        const overview = await apiGet(window.MCPGateway.config.endpoints.overview, {
+            environment: currentEnvironment()
+        });
+        state.overview = overview;
+        renderDashboard(session, overview);
+    } catch (error) {
+        renderDashboard(session, null);
+        showToast(error.message, false);
+    }
+}
 
-document.addEventListener("click", async (event) => {
-  const button = event.target.closest(".refresh-upstream");
-  if (!button) {
-    return;
-  }
-  const serverCode = button.dataset.server;
-  await submitJson(
-    `/api/v1/admin/upstreams/${encodeURIComponent(serverCode)}/refresh?environment=${encodeURIComponent(
-      state.environment
-    )}`,
-    {}
-  );
-  logActivity("上游健康探测已执行", `${serverCode} 已完成一次手动探活。`, "warn");
-  await refreshAll();
-});
+function renderDashboard(session, overview) {
+    $("#stat-total-upstreams").text(overview ? overview.totalUpstreams : 0);
+    $("#stat-routable-upstreams").text(overview ? overview.routableUpstreams : 0);
+    $("#stat-discoverable-tools").text(overview ? overview.discoverableTools : 0);
+    $("#stat-environment").text(currentEnvironment());
 
-showGate();
-renderActivityFeed();
-bootFromExistingToken();
+    $("#dashboard-profile").text(session.profile || "-");
+    $("#dashboard-mode").text(window.MCPGateway.authLabel());
+    $("#dashboard-caller").text(overview ? overview.callerId : session.profile || "-");
+    $("#dashboard-request-id").text(state.lastRequestId || "-");
+    $("#dashboard-expire-time").text(formatDateTime(session.expiresAt));
+    $("#dashboard-scope-badges").html(buildScopeBadges(session.scopes));
+
+    const priorities = [];
+    if (!overview) {
+        priorities.push({ title: "先刷新网关概览", detail: "当前还没有拿到最新概览，先确认系统状态再操作。" });
+    } else {
+        if (overview.routableUpstreams === 0) {
+            priorities.push({ title: "当前没有可路由上游", detail: "建议先去上游资源页面检查健康状态或补充服务。" });
+        }
+        if (overview.discoverableTools > 0) {
+            priorities.push({ title: "可以直接进入 MCP 实验室", detail: `当前可见 ${overview.discoverableTools} 个工具，适合先做一次真实调用。` });
+        } else {
+            priorities.push({ title: "当前没有可见工具", detail: "工具目录或访问策略可能还没准备好，建议先检查配置。" });
+        }
+        if (session.managedSystems && session.managedSystems.length) {
+            priorities.push({ title: "big-market 已在当前权限范围内", detail: "如果你要验证业务侧动作，可以直接进入 big-market 操作台。" });
+        }
+    }
+    if (!priorities.length) {
+        priorities.push({ title: "工作台已就绪", detail: "你可以从左侧导航直接进入配置区或 MCP 实验室。" });
+    }
+
+    $("#dashboard-priority-list").html(
+        priorities
+            .map((item) => `
+                <div class="metric-panel">
+                    <div class="metric-label">${escapeHtml(item.title)}</div>
+                    <div class="text-muted small">${escapeHtml(item.detail)}</div>
+                </div>
+            `)
+            .join("")
+    );
+
+    if (!overview || !overview.enabledServers || !overview.enabledServers.length) {
+        renderStateMessage("#dashboard-upstream-grid", "当前还没有启用的上游服务");
+        return;
+    }
+
+    $("#dashboard-upstream-grid").html(
+        overview.enabledServers
+            .map((server) => `
+                <div class="metric-panel">
+                    <div class="metric-label">${escapeHtml(server.serverCode)}</div>
+                    <div class="metric-value">${escapeHtml(server.name)}</div>
+                    <div class="text-muted small mt-2">${escapeHtml(server.baseUrl)}</div>
+                    <div class="mt-3">
+                        <span class="badge ${server.enabled ? "bg-success-subtle text-success" : "bg-secondary-subtle text-secondary"}">${server.enabled ? "已启用" : "已禁用"}</span>
+                        <span class="badge ${server.healthStatus === "UP" ? "bg-success-subtle text-success" : "bg-warning-subtle text-warning-emphasis"}">${escapeHtml(server.healthStatus)}</span>
+                    </div>
+                </div>
+            `)
+            .join("")
+    );
+}
+
+function initUpstreamsView() {
+    loadUpstreamsView();
+
+    $("#form-upstream-search").off("submit").on("submit", function (event) {
+        event.preventDefault();
+        renderUpstreamTable();
+    });
+
+    $("#resetUpstreamSearchBtn").off("click").on("click", function () {
+        $("#form-upstream-search")[0].reset();
+        renderUpstreamTable();
+    });
+
+    $("#refreshUpstreamsBtn").off("click").on("click", loadUpstreamsView);
+
+    $("#upstreamForm").off("submit").on("submit", async function (event) {
+        event.preventDefault();
+        const payload = {
+            environment: currentEnvironment(),
+            serverCode: $(this).find("[name='serverCode']").val().trim(),
+            name: $(this).find("[name='name']").val().trim(),
+            baseUrl: $(this).find("[name='baseUrl']").val().trim(),
+            transportType: $(this).find("[name='transportType']").val(),
+            authMode: $(this).find("[name='authMode']").val().trim(),
+            enabled: $(this).find("[name='enabled']").is(":checked"),
+            timeoutMs: Number($(this).find("[name='timeoutMs']").val() || 3000)
+        };
+        try {
+            await apiPost(window.MCPGateway.config.endpoints.upstreams, payload);
+            showToast("上游服务保存成功");
+            bootstrap.Modal.getOrCreateInstance(document.getElementById("upstreamModal")).hide();
+            this.reset();
+            $("#upstream-enabled").prop("checked", true);
+            await loadUpstreamsView();
+        } catch (error) {
+            showToast(error.message, false);
+        }
+    });
+
+    $(document).off("click", ".btn-refresh-upstream").on("click", ".btn-refresh-upstream", async function () {
+        const serverCode = $(this).data("server");
+        try {
+            await apiPost(`${window.MCPGateway.config.endpoints.upstreams}/${encodeURIComponent(serverCode)}/refresh?environment=${encodeURIComponent(currentEnvironment())}`, {});
+            showToast(`已刷新 ${serverCode} 的健康状态`);
+            await loadUpstreamsView();
+        } catch (error) {
+            showToast(error.message, false);
+        }
+    });
+}
+
+async function loadUpstreamsView() {
+    try {
+        state.upstreams = await apiGet(window.MCPGateway.config.endpoints.upstreams, {
+            environment: currentEnvironment()
+        });
+        renderUpstreamTable();
+    } catch (error) {
+        renderStateMessage("#upstreamTableBody", error.message, "danger");
+    }
+}
+
+function renderUpstreamTable() {
+    const code = ($("#search-upstream-code").val() || "").trim().toLowerCase();
+    const name = ($("#search-upstream-name").val() || "").trim().toLowerCase();
+    const items = state.upstreams.filter((item) => {
+        return (!code || item.serverCode.toLowerCase().includes(code))
+            && (!name || item.name.toLowerCase().includes(name));
+    });
+
+    if (!items.length) {
+        renderStateMessage("#upstreamTableBody", "没有匹配的上游服务");
+        return;
+    }
+
+    $("#upstreamTableBody").html(
+        items.map((item) => `
+            <tr>
+                <td><code>${escapeHtml(item.serverCode)}</code></td>
+                <td>${escapeHtml(item.name)}</td>
+                <td class="text-truncate" style="max-width: 280px;" title="${escapeHtml(item.baseUrl)}">${escapeHtml(item.baseUrl)}</td>
+                <td>
+                    <span class="badge bg-secondary-subtle text-secondary">${escapeHtml(item.transportType)}</span>
+                    <span class="badge bg-info-subtle text-info-emphasis">${escapeHtml(item.authMode)}</span>
+                </td>
+                <td>
+                    <span class="badge ${item.enabled ? "bg-success-subtle text-success" : "bg-secondary-subtle text-secondary"}">${item.enabled ? "已启用" : "已禁用"}</span>
+                    <span class="badge ${item.healthStatus === "UP" ? "bg-success-subtle text-success" : "bg-warning-subtle text-warning-emphasis"}">${escapeHtml(item.healthStatus)}</span>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary btn-refresh-upstream" data-server="${escapeHtml(item.serverCode)}">
+                        <i class="bi bi-arrow-clockwise"></i> 探活
+                    </button>
+                </td>
+            </tr>
+        `).join("")
+    );
+}
+
+function initToolsView() {
+    loadToolsView();
+
+    $("#form-tool-search").off("submit").on("submit", function (event) {
+        event.preventDefault();
+        renderToolTable();
+    });
+
+    $("#resetToolSearchBtn").off("click").on("click", function () {
+        $("#form-tool-search")[0].reset();
+        renderToolTable();
+    });
+
+    $("#refreshToolsBtn").off("click").on("click", loadToolsView);
+
+    $("#toolForm").off("submit").on("submit", async function (event) {
+        event.preventDefault();
+        const payload = {
+            environment: currentEnvironment(),
+            serverCode: $(this).find("[name='serverCode']").val().trim(),
+            toolName: $(this).find("[name='toolName']").val().trim(),
+            description: $(this).find("[name='description']").val().trim(),
+            inputSchema: $(this).find("[name='inputSchema']").val().trim(),
+            enabled: $(this).find("[name='enabled']").is(":checked")
+        };
+        try {
+            await apiPost(window.MCPGateway.config.endpoints.tools, payload);
+            showToast("工具定义保存成功");
+            bootstrap.Modal.getOrCreateInstance(document.getElementById("toolModal")).hide();
+            this.reset();
+            $("#tool-enabled").prop("checked", true);
+            await loadToolsView();
+        } catch (error) {
+            showToast(error.message, false);
+        }
+    });
+}
+
+async function loadToolsView() {
+    try {
+        state.tools = await apiGet(window.MCPGateway.config.endpoints.tools, {
+            environment: currentEnvironment()
+        });
+        renderToolTable();
+    } catch (error) {
+        renderStateMessage("#toolTableBody", error.message, "danger");
+    }
+}
+
+function renderToolTable() {
+    const server = ($("#search-tool-server").val() || "").trim().toLowerCase();
+    const toolName = ($("#search-tool-name").val() || "").trim().toLowerCase();
+    const items = state.tools.filter((item) => {
+        return (!server || item.serverCode.toLowerCase().includes(server))
+            && (!toolName || item.toolName.toLowerCase().includes(toolName));
+    });
+    if (!items.length) {
+        renderStateMessage("#toolTableBody", "没有匹配的工具定义");
+        return;
+    }
+    $("#toolTableBody").html(
+        items.map((item) => `
+            <tr>
+                <td>
+                    <strong>${escapeHtml(item.toolIdentifier)}</strong>
+                    <div class="text-muted small">${escapeHtml(item.toolName)}</div>
+                </td>
+                <td><code>${escapeHtml(item.serverCode)}</code></td>
+                <td>${escapeHtml(item.description || "-")}</td>
+                <td><pre class="mb-0 text-wrap small">${escapeHtml(item.inputSchema || "{}")}</pre></td>
+                <td><span class="badge ${item.enabled ? "bg-success-subtle text-success" : "bg-secondary-subtle text-secondary"}">${item.enabled ? "已启用" : "已禁用"}</span></td>
+            </tr>
+        `).join("")
+    );
+}
+
+function initPoliciesView() {
+    loadPoliciesView();
+
+    $("#form-policy-search").off("submit").on("submit", function (event) {
+        event.preventDefault();
+        renderPolicyTable();
+    });
+
+    $("#resetPolicySearchBtn").off("click").on("click", function () {
+        $("#form-policy-search")[0].reset();
+        renderPolicyTable();
+    });
+
+    $("#refreshPoliciesBtn").off("click").on("click", loadPoliciesView);
+
+    $("#policyForm").off("submit").on("submit", async function (event) {
+        event.preventDefault();
+        const payload = {
+            environment: currentEnvironment(),
+            subjectType: $(this).find("[name='subjectType']").val(),
+            subjectId: $(this).find("[name='subjectId']").val().trim(),
+            toolIdentifier: $(this).find("[name='toolIdentifier']").val().trim(),
+            decision: $(this).find("[name='decision']").val(),
+            enabled: $(this).find("[name='enabled']").is(":checked"),
+            reason: $(this).find("[name='reason']").val().trim()
+        };
+        try {
+            await apiPost(window.MCPGateway.config.endpoints.policies, payload);
+            showToast("访问策略保存成功");
+            bootstrap.Modal.getOrCreateInstance(document.getElementById("policyModal")).hide();
+            this.reset();
+            $("#policy-enabled").prop("checked", true);
+            await loadPoliciesView();
+        } catch (error) {
+            showToast(error.message, false);
+        }
+    });
+}
+
+async function loadPoliciesView() {
+    try {
+        state.policies = await apiGet(window.MCPGateway.config.endpoints.policies, {
+            environment: currentEnvironment()
+        });
+        renderPolicyTable();
+    } catch (error) {
+        renderStateMessage("#policyTableBody", error.message, "danger");
+    }
+}
+
+function renderPolicyTable() {
+    const subject = ($("#search-policy-subject").val() || "").trim().toLowerCase();
+    const tool = ($("#search-policy-tool").val() || "").trim().toLowerCase();
+    const items = state.policies.filter((item) => {
+        return (!subject || item.subjectId.toLowerCase().includes(subject))
+            && (!tool || item.toolIdentifier.toLowerCase().includes(tool));
+    });
+    if (!items.length) {
+        renderStateMessage("#policyTableBody", "没有匹配的策略");
+        return;
+    }
+    $("#policyTableBody").html(
+        items.map((item) => `
+            <tr>
+                <td>
+                    <strong>${escapeHtml(item.subjectId)}</strong>
+                    <div class="text-muted small">${escapeHtml(item.subjectType)}</div>
+                </td>
+                <td><code>${escapeHtml(item.toolIdentifier)}</code></td>
+                <td><span class="badge ${item.decision === "ALLOW" ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger"}">${escapeHtml(item.decision)}</span></td>
+                <td><span class="badge ${item.enabled ? "bg-success-subtle text-success" : "bg-secondary-subtle text-secondary"}">${item.enabled ? "生效中" : "已停用"}</span></td>
+                <td>${escapeHtml(item.reason || "-")}</td>
+            </tr>
+        `).join("")
+    );
+}
+
+function initBigMarketView() {
+    loadBigMarketOverview();
+    $("#refreshBigMarketBtn").off("click").on("click", loadBigMarketOverview);
+
+    $("#bmActivityArmory").off("click").on("click", () => runBigMarketAction(
+        window.MCPGateway.config.endpoints.bigMarketActivityArmory,
+        { activityId: Number($("#bmActivityId").val()) },
+        "活动装配"
+    ));
+    $("#bmStrategyArmory").off("click").on("click", () => runBigMarketAction(
+        window.MCPGateway.config.endpoints.bigMarketStrategyArmory,
+        { strategyId: Number($("#bmStrategyId").val()) },
+        "策略装配"
+    ));
+    $("#bmAwardList").off("click").on("click", () => runBigMarketAction(
+        window.MCPGateway.config.endpoints.bigMarketAwardList,
+        bigMarketPayload(),
+        "查询奖品列表"
+    ));
+    $("#bmUserAccount").off("click").on("click", () => runBigMarketAction(
+        window.MCPGateway.config.endpoints.bigMarketUserAccount,
+        bigMarketPayload(),
+        "查询活动账户"
+    ));
+    $("#bmDraw").off("click").on("click", () => runBigMarketAction(
+        window.MCPGateway.config.endpoints.bigMarketDraw,
+        bigMarketPayload(),
+        "执行抽奖"
+    ));
+}
+
+function bigMarketPayload() {
+    return {
+        userId: $("#bmUserId").val().trim(),
+        activityId: Number($("#bmActivityId").val())
+    };
+}
+
+async function loadBigMarketOverview() {
+    try {
+        state.bigMarket = await apiGet(window.MCPGateway.config.endpoints.bigMarket);
+        $("#bigMarketOverviewGrid").html(
+            [
+                ["系统名称", state.bigMarket.systemName],
+                ["仓库路径", state.bigMarket.repoPath],
+                ["基础地址", state.bigMarket.baseUrl],
+                ["API 版本", state.bigMarket.apiVersion],
+                ["连通状态", state.bigMarket.reachable ? "在线" : "离线"],
+                ["支持操作", (state.bigMarket.supportedOperations || []).join(" / ")]
+            ].map((item) => `
+                <div class="metric-panel">
+                    <div class="metric-label">${escapeHtml(item[0])}</div>
+                    <div class="metric-value">${escapeHtml(item[1] || "-")}</div>
+                </div>
+            `).join("")
+        );
+    } catch (error) {
+        renderStateMessage("#bigMarketOverviewGrid", error.message, "danger");
+        $("#bigMarketResult").text(error.message);
+    }
+}
+
+async function runBigMarketAction(url, payload, actionName) {
+    try {
+        const result = await apiPost(url, payload);
+        $("#bigMarketResult").text(JSON.stringify(result, null, 2));
+        showToast(`${actionName}已完成`);
+    } catch (error) {
+        $("#bigMarketResult").text(error.message);
+        showToast(error.message, false);
+    }
+}
+
+function initMcpLabView() {
+    $("#mcpEnvironment").val(currentEnvironment());
+    $("#mcpEndpointPreview").text(window.MCPGateway.buildMcpStreamUrl() || "-");
+    renderMcpStatus();
+    renderMcpTraffic();
+    renderMcpHistoryTable();
+    renderMcpToolSelect();
+    renderMcpResult();
+
+    $("#reloadMcpLabBtn").off("click").on("click", function () {
+        cleanupMcpConnection(true);
+        $("#mcpEndpointPreview").text(window.MCPGateway.buildMcpStreamUrl() || "-");
+        renderMcpStatus();
+        renderMcpTraffic();
+        showToast("MCP 连接已重置");
+    });
+
+    $("#mcpConnectBtn").off("click").on("click", connectMcpStream);
+    $("#mcpInitializeBtn").off("click").on("click", initializeMcpSession);
+    $("#mcpListToolsBtn").off("click").on("click", requestMcpToolsList);
+    $("#mcpCallToolBtn").off("click").on("click", callSelectedMcpTool);
+    $("#mcpToolSelect").off("change").on("change", function () {
+        state.mcp.selectedTool = $(this).val() || null;
+        renderMcpToolSelect();
+    });
+    $("#clearMcpTrafficBtn").off("click").on("click", function () {
+        state.mcp.traffic = [];
+        renderMcpTraffic();
+    });
+    $("#openMcpHistoryBtn").off("click").on("click", function () {
+        renderMcpHistoryTable();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("mcpHistoryModal")).show();
+    });
+    $("#clearMcpHistoryBtn").off("click").on("click", function () {
+        state.mcp.history = [];
+        persistMcpHistory();
+        renderMcpHistoryTable();
+    });
+}
+
+function setMcpStatus(status, text) {
+    state.mcp.status = status;
+    state.mcp.statusText = text;
+    renderMcpStatus();
+}
+
+function renderMcpStatus() {
+    const $dot = $("#mcpStatusDot");
+    const $text = $("#mcpStatusText");
+    if (!$dot.length) {
+        return;
+    }
+    $dot.removeClass("ready connecting error");
+    if (state.mcp.status === "ready") {
+        $dot.addClass("ready");
+    } else if (state.mcp.status === "connecting") {
+        $dot.addClass("connecting");
+    } else if (state.mcp.status === "error") {
+        $dot.addClass("error");
+    }
+    $text.text(state.mcp.statusText);
+}
+
+function cleanupMcpConnection(clearTools) {
+    if (state.mcp.source) {
+        state.mcp.source.close();
+    }
+    state.mcp.source = null;
+    state.mcp.postUrl = null;
+    state.mcp.pending.forEach((pending) => clearTimeout(pending.timeout));
+    state.mcp.pending.clear();
+    if (clearTools) {
+        state.mcp.tools = [];
+        state.mcp.selectedTool = null;
+    }
+    setMcpStatus("idle", "未连接");
+}
+
+function connectMcpStream() {
+    const endpoint = window.MCPGateway.buildMcpStreamUrl();
+    if (!endpoint) {
+        showToast("当前没有可用的访问 Token", false);
+        return;
+    }
+
+    cleanupMcpConnection(false);
+    state.mcp.traffic = [];
+    renderMcpTraffic();
+    setMcpStatus("connecting", "连接中...");
+
+    const source = new EventSource(endpoint);
+    state.mcp.source = source;
+    recordMcpTraffic("system", "连接 SSE", { endpoint });
+
+    source.onopen = function () {
+        setMcpStatus("connecting", "SSE 已建立，等待 endpoint");
+    };
+
+    source.onerror = function () {
+        setMcpStatus("error", "连接异常或已中断");
+        recordMcpTraffic("error", "SSE 异常", { endpoint });
+    };
+
+    source.addEventListener("endpoint", function (event) {
+        state.mcp.postUrl = event.data;
+        setMcpStatus("ready", "已连接，可发送 JSON-RPC");
+        recordMcpTraffic("system", "收到 endpoint", { endpoint: event.data });
+    });
+
+    source.addEventListener("message", function (event) {
+        try {
+            const payload = JSON.parse(event.data);
+            recordMcpTraffic("inbound", "收到 JSON-RPC", payload);
+            handleMcpMessage(payload);
+        } catch (error) {
+            recordMcpTraffic("error", "解析消息失败", { raw: event.data });
+        }
+    });
+}
+
+function createRpcId() {
+    return `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+}
+
+function sendMcpRequest(method, params) {
+    if (!state.mcp.postUrl) {
+        return Promise.reject(new Error("还没有拿到 POST endpoint，请先建立连接"));
+    }
+    const request = {
+        jsonrpc: "2.0",
+        id: createRpcId(),
+        method,
+        params: params || {}
+    };
+    recordMcpTraffic("outbound", `发送 ${method}`, request);
+
+    return fetch(state.mcp.postUrl, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(request),
+        credentials: "same-origin"
+    }).then((response) => {
+        if (!response.ok && response.status !== 202) {
+            throw new Error(`MCP 请求被拒绝: ${response.status}`);
+        }
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                state.mcp.pending.delete(request.id);
+                reject(new Error(`${method} 响应超时`));
+            }, 30000);
+            state.mcp.pending.set(request.id, {
+                method,
+                resolve,
+                reject,
+                timeout
+            });
+        });
+    });
+}
+
+function handleMcpMessage(payload) {
+    if (payload && payload.id && state.mcp.pending.has(payload.id)) {
+        const pending = state.mcp.pending.get(payload.id);
+        clearTimeout(pending.timeout);
+        state.mcp.pending.delete(payload.id);
+        if (payload.error) {
+            pending.reject(payload.error);
+        } else {
+            pending.resolve(payload.result);
+        }
+    }
+}
+
+async function initializeMcpSession() {
+    try {
+        const result = await sendMcpRequest("initialize", {
+            clientInfo: {
+                name: "MCP Gateway Admin Workspace",
+                version: "1.0.0"
+            }
+        });
+        if (result && result.tools) {
+            state.mcp.tools = result.tools;
+            state.mcp.selectedTool = result.tools.length ? result.tools[0].name : null;
+            renderMcpToolSelect();
+        }
+        state.mcp.result = JSON.stringify(result, null, 2);
+        renderMcpResult();
+        saveMcpHistory("initialize", "完成 initialize 握手", true);
+        showToast("initialize 完成");
+    } catch (error) {
+        state.mcp.result = JSON.stringify(error, null, 2);
+        renderMcpResult();
+        saveMcpHistory("initialize", error.message || "initialize 失败", false);
+        showToast(error.message || "initialize 失败", false);
+    }
+}
+
+async function requestMcpToolsList() {
+    try {
+        const result = await sendMcpRequest("tools/list", {});
+        state.mcp.tools = (result && result.tools) || [];
+        state.mcp.selectedTool = state.mcp.tools.length ? state.mcp.tools[0].name : null;
+        renderMcpToolSelect();
+        state.mcp.result = JSON.stringify(result, null, 2);
+        renderMcpResult();
+        saveMcpHistory("tools/list", `发现 ${state.mcp.tools.length} 个工具`, true);
+        showToast("已刷新工具列表");
+    } catch (error) {
+        state.mcp.result = JSON.stringify(error, null, 2);
+        renderMcpResult();
+        saveMcpHistory("tools/list", error.message || "tools/list 失败", false);
+        showToast(error.message || "tools/list 失败", false);
+    }
+}
+
+async function callSelectedMcpTool() {
+    const selectedTool = state.mcp.tools.find((item) => item.name === $("#mcpToolSelect").val());
+    if (!selectedTool) {
+        showToast("请先选择一个工具", false);
+        return;
+    }
+
+    let args;
+    try {
+        args = JSON.parse($("#mcpArgumentsInput").val() || "{}");
+    } catch (error) {
+        showToast("参数 JSON 解析失败", false);
+        return;
+    }
+
+    try {
+        const result = await sendMcpRequest("tools/call", {
+            name: selectedTool.name,
+            arguments: args
+        });
+        state.mcp.result = JSON.stringify(result, null, 2);
+        renderMcpResult();
+        saveMcpHistory("tools/call", `调用 ${selectedTool.name} 成功`, true);
+        showToast(`已执行 ${selectedTool.name}`);
+    } catch (error) {
+        state.mcp.result = JSON.stringify(error, null, 2);
+        renderMcpResult();
+        saveMcpHistory("tools/call", `调用 ${selectedTool.name} 失败`, false);
+        showToast(error.message || "tools/call 失败", false);
+    }
+}
+
+function renderMcpToolSelect() {
+    const $select = $("#mcpToolSelect");
+    if (!$select.length) {
+        return;
+    }
+    if (!state.mcp.tools.length) {
+        $select.html('<option value="">请先连接并加载工具列表...</option>');
+        $("#mcpSchemaPreview").text("{}");
+        return;
+    }
+    $select.html(
+        state.mcp.tools.map((tool) => `
+            <option value="${escapeHtml(tool.name)}" ${tool.name === state.mcp.selectedTool ? "selected" : ""}>
+                ${escapeHtml(tool.name)}
+            </option>
+        `).join("")
+    );
+    const selectedTool = state.mcp.tools.find((item) => item.name === (state.mcp.selectedTool || $select.val()));
+    if (selectedTool) {
+        state.mcp.selectedTool = selectedTool.name;
+        $("#mcpSchemaPreview").text(JSON.stringify(selectedTool.inputSchema || {}, null, 2));
+        $("#mcpArgumentsInput").val(JSON.stringify(sampleArgumentsFromSchema(selectedTool.inputSchema || {}), null, 2));
+    }
+}
+
+function sampleArgumentsFromSchema(schema) {
+    if (!schema || typeof schema !== "object") {
+        return {};
+    }
+    if (schema.type === "object" && schema.properties) {
+        const result = {};
+        Object.keys(schema.properties).forEach((key) => {
+            result[key] = sampleArgumentsFromSchema(schema.properties[key]);
+        });
+        return result;
+    }
+    if (schema.type === "array") {
+        return [];
+    }
+    if (schema.type === "integer" || schema.type === "number") {
+        return 0;
+    }
+    if (schema.type === "boolean") {
+        return false;
+    }
+    return "";
+}
+
+function recordMcpTraffic(direction, title, payload) {
+    state.mcp.traffic.push({
+        time: new Date().toLocaleTimeString("zh-CN"),
+        direction,
+        title,
+        payload
+    });
+    if (state.mcp.traffic.length > 80) {
+        state.mcp.traffic.shift();
+    }
+    renderMcpTraffic();
+}
+
+function renderMcpTraffic() {
+    const $window = $("#mcpTrafficWindow");
+    if (!$window.length) {
+        return;
+    }
+    if (!state.mcp.traffic.length) {
+        $window.html(`
+            <div class="text-center text-muted py-5" id="mcpTrafficPlaceholder">
+                <i class="bi bi-broadcast-pin fs-3 d-block mb-2"></i>
+                还没有 MCP 消息。先建立 SSE 连接，再执行 initialize 或 tools/call。
+            </div>
+        `);
+        return;
+    }
+    $window.html(
+        state.mcp.traffic.map((entry) => {
+            const bubbleClass = entry.direction === "error"
+                ? "chat-bubble chat-bubble-error"
+                : entry.direction === "outbound"
+                    ? "chat-bubble chat-bubble-user"
+                    : "chat-bubble chat-bubble-assistant";
+            return `
+                <div class="mb-3">
+                    <div class="${bubbleClass}">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="badge bg-light text-dark">${escapeHtml(entry.direction)}</span>
+                            <span class="fw-semibold">${escapeHtml(entry.title)}</span>
+                            <span class="text-muted small">${escapeHtml(entry.time)}</span>
+                        </div>
+                        <pre class="mb-0 small">${escapeHtml(JSON.stringify(entry.payload, null, 2))}</pre>
+                    </div>
+                </div>
+            `;
+        }).join("")
+    );
+    $window.scrollTop($window[0].scrollHeight);
+}
+
+function renderMcpResult() {
+    if ($("#mcpResultOutput").length) {
+        $("#mcpResultOutput").text(state.mcp.result || "MCP 调用结果会显示在这里。");
+    }
+}
+
+function saveMcpHistory(method, summary, success) {
+    state.mcp.history.unshift({
+        time: Date.now(),
+        method,
+        summary,
+        success
+    });
+    if (state.mcp.history.length > 50) {
+        state.mcp.history = state.mcp.history.slice(0, 50);
+    }
+    persistMcpHistory();
+    renderMcpHistoryTable();
+}
+
+function persistMcpHistory() {
+    localStorage.setItem(MCP_HISTORY_KEY, JSON.stringify(state.mcp.history));
+}
+
+function renderMcpHistoryTable() {
+    const $tbody = $("#mcpHistoryTableBody");
+    if (!$tbody.length) {
+        return;
+    }
+    if (!state.mcp.history.length) {
+        $tbody.html('<tr><td colspan="4" class="text-center text-muted py-3">暂无调用历史</td></tr>');
+        return;
+    }
+    $tbody.html(
+        state.mcp.history.map((item) => `
+            <tr>
+                <td>${escapeHtml(new Date(item.time).toLocaleString("zh-CN"))}</td>
+                <td><code>${escapeHtml(item.method)}</code></td>
+                <td>${escapeHtml(item.summary)}</td>
+                <td><span class="badge ${item.success ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger"}">${item.success ? "成功" : "失败"}</span></td>
+            </tr>
+        `).join("")
+    );
+}

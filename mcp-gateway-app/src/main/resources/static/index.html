@@ -3,443 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCP 网关监控控制台</title>
+    <title>MCP Gateway 工作台入口</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/assets/styles.css">
 </head>
-<body>
-<section id="accessGate" class="access-gate">
-    <div class="gate-layout">
-        <aside class="gate-story">
-            <div class="brand-lockup">
-                <div class="brand-badge">MG</div>
-                <div>
-                    <p class="eyebrow accent">MCP Gateway</p>
-                    <h1>令牌驱动的系统控制入口</h1>
-                </div>
-            </div>
+<body class="workspace-access-body">
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-xl-10">
+            <div class="row g-4 align-items-stretch">
+                <div class="col-lg-6">
+                    <div class="access-story-card h-100">
+                        <div class="access-brand">
+                            <span class="access-brand-mark">MG</span>
+                            <div>
+                                <p class="text-uppercase small text-primary fw-semibold mb-2">MCP Gateway Workspace</p>
+                                <h1 class="display-5 fw-semibold mb-3">直接进入可用工作台，不先被后台表单淹没。</h1>
+                            </div>
+                        </div>
 
-            <p class="gate-copy">
-                这里不是传统账号密码后台，而是网关签发令牌之后的控制台入口。
-                用户拿到访问令牌后，系统会自动识别他可访问的环境、受管系统、工具范围和控制权限。
-            </p>
+                        <p class="text-secondary fs-5 mb-4">
+                            这套前端直接继承 `ai-mcp-gateway` 的“管理台 + 测试台”工作流，但登录方式改成更符合当前项目的
+                            Token 访问模型。先确认身份，再进入控制台、系统操作和 MCP 实验室。
+                        </p>
 
-            <div class="story-grid">
-                <article class="story-card">
-                    <p class="eyebrow">阶段一</p>
-                    <h2>网关签发令牌</h2>
-                    <p>令牌绑定 profile、roles、scopes、managedSystems 与 environment。</p>
-                </article>
-                <article class="story-card">
-                    <p class="eyebrow">阶段二</p>
-                    <h2>控制台验证令牌</h2>
-                    <p>控制台只接受 Bearer Token，并基于它装载可见模块和可执行动作。</p>
-                </article>
-                <article class="story-card">
-                    <p class="eyebrow">阶段三</p>
-                    <h2>进入监控与控制面</h2>
-                    <p>当前默认受管系统是 `big-market-71772-z`，同时保留网关运行态与工具治理视图。</p>
-                </article>
-            </div>
-        </aside>
-
-        <main class="gate-workbench">
-            <article class="gate-panel">
-                <div class="section-head">
-                    <div>
-                        <p class="eyebrow">访问控制台</p>
-                        <h2>输入访问令牌</h2>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="access-feature-card h-100">
+                                    <span class="access-step">01</span>
+                                    <strong>进入工作台</strong>
+                                    <small>一键签发演示令牌，直接进入管理员或调用方视图。</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="access-feature-card h-100">
+                                    <span class="access-step">02</span>
+                                    <strong>验证链路</strong>
+                                    <small>控制台、big-market 操作、MCP 调用实验室都在同一个壳里。</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="access-feature-card h-100">
+                                    <span class="access-step">03</span>
+                                    <strong>需要时再配置</strong>
+                                    <small>上游、工具和策略作为后置能力，不抢第一屏注意力。</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <label class="field field-wide">
-                    <span>Bearer Token</span>
-                    <textarea id="gateTokenInput" rows="6" placeholder="粘贴由 MCP Gateway 签发的访问令牌"></textarea>
-                </label>
-                <div class="button-row">
-                    <button id="gateEnterButton" class="primary-button" type="button">进入控制台</button>
-                    <button id="gateClearButton" class="secondary-button" type="button">清空</button>
-                </div>
-                <p id="gateMessage" class="gate-message">支持 URL `?token=...` 自动带入，也会记住本地最近一次令牌。</p>
-            </article>
 
-            <article class="gate-panel">
-                <div class="section-head">
-                    <div>
-                        <p class="eyebrow">本地演示</p>
-                        <h2>快速签发测试令牌</h2>
+                <div class="col-lg-6">
+                    <div class="login-card workspace-card">
+                        <div class="login-header">
+                            <i class="bi bi-hdd-network display-4 mb-3 d-block"></i>
+                            <h2 class="fw-bold mb-2">进入 MCP Gateway 工作台</h2>
+                            <p class="mb-0 opacity-75">支持演示令牌一键进入，也支持粘贴已有 Bearer Token</p>
+                        </div>
+
+                        <div class="login-body">
+                            <div class="d-grid gap-3 mb-4">
+                                <button type="button" class="btn btn-primary btn-login btn-lg" id="enterDemoAdminBtn">
+                                    <i class="bi bi-stars me-2"></i>进入管理员工作台
+                                </button>
+                                <button type="button" class="btn btn-outline-primary btn-lg rounded-pill" id="enterDemoAppBtn">
+                                    <i class="bi bi-person-badge me-2"></i>进入调用方视图
+                                </button>
+                            </div>
+
+                            <div class="text-center text-muted small my-3">或者使用已有 Bearer Token</div>
+
+                            <form id="customTokenForm">
+                                <div class="form-floating mb-3">
+                                    <textarea class="form-control token-textarea" id="customBearerToken" placeholder="粘贴 Bearer Token" required></textarea>
+                                    <label for="customBearerToken"><i class="bi bi-key me-2"></i>Bearer Token</label>
+                                </div>
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-dark rounded-pill py-3 fw-semibold">
+                                        <i class="bi bi-box-arrow-in-right me-2"></i>使用这个 Token 进入
+                                    </button>
+                                </div>
+                            </form>
+
+                            <div id="accessError" class="alert alert-danger d-none mt-4 py-2 small align-items-center" role="alert">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                <span></span>
+                            </div>
+
+                            <div class="alert alert-light border mt-4 mb-0">
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="bi bi-info-circle text-primary mt-1"></i>
+                                    <div class="small text-muted">
+                                        管理员演示令牌默认带上 `big-market-71772-z` 的受管系统权限，进入后可以直接使用
+                                        big-market 操作台和标准 MCP 实验室。
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-4 text-muted small">
+                        <span class="me-3"><i class="bi bi-lock"></i> Bearer Token Access</span>
+                        <span><i class="bi bi-broadcast"></i> Standard MCP over SSE</span>
                     </div>
                 </div>
-                <p class="gate-copy compact">
-                    本地环境可直接签发演示令牌。生产环境应由 MCP Gateway 的系统配置流程签发正式令牌。
-                </p>
-                <div class="stack-actions">
-                    <button id="issueAdminTokenButton" class="primary-button" type="button">签发演示管理员令牌</button>
-                    <button id="issueAppTokenButton" class="secondary-button" type="button">签发演示调用方令牌</button>
-                </div>
-            </article>
-        </main>
-    </div>
-</section>
-
-<div id="consoleApp" class="console-shell hidden">
-    <aside class="sidebar">
-        <div class="sidebar-brand">
-            <div class="brand-badge">MG</div>
-            <div>
-                <p class="eyebrow">控制平面</p>
-                <h1>MCP 网关</h1>
             </div>
         </div>
-
-        <nav class="sidebar-nav">
-            <a href="#overview" class="sidebar-link">总览</a>
-            <a href="#managed-system" class="sidebar-link">受管系统</a>
-            <a href="#resources" class="sidebar-link">上游资源</a>
-            <a href="#catalog" class="sidebar-link">工具目录</a>
-            <a href="#access" class="sidebar-link">访问控制</a>
-        </nav>
-
-        <section class="sidebar-card">
-            <p class="eyebrow">令牌会话</p>
-            <h2 id="activeProfile">-</h2>
-            <code id="activeCredential" class="token-line">-</code>
-            <div class="sidebar-meta">
-                <div>
-                    <span>认证方式</span>
-                    <strong>Bearer Token</strong>
-                </div>
-                <div>
-                    <span>环境</span>
-                    <strong id="activeEnvironment">-</strong>
-                </div>
-                <div>
-                    <span>角色</span>
-                    <strong id="activeRoles">-</strong>
-                </div>
-                <div>
-                    <span>过期时间</span>
-                    <strong id="activeExpiresAt">-</strong>
-                </div>
-            </div>
-            <div class="sidebar-actions">
-                <button id="switchAdminTokenButton" class="secondary-button" type="button">切换管理员令牌</button>
-                <button id="switchAppTokenButton" class="secondary-button" type="button">切换调用方令牌</button>
-                <button id="logoutTokenButton" class="ghost-button" type="button">退出令牌</button>
-            </div>
-        </section>
-
-        <section class="sidebar-note">
-            <p class="eyebrow">模型说明</p>
-            <p>
-                MCP Gateway 负责签发访问令牌与管理受管系统能力；控制台网站负责基于 token 执行系统操作、监控和实验。
-            </p>
-        </section>
-    </aside>
-
-    <main class="main-stack">
-        <header class="topbar">
-            <div>
-                <p class="eyebrow accent">MCP 网关监控控制台</p>
-                <h2>令牌驱动的系统操作、运行监控与工具治理入口</h2>
-                <p class="topbar-copy">
-                    当前控制台以 token 为唯一访问凭证。令牌决定可见环境、可见工具、可操作系统以及可用控制动作。
-                </p>
-            </div>
-            <div class="status-pair">
-                <div class="status-card">
-                    <span>系统状态</span>
-                    <strong id="statusText">就绪</strong>
-                </div>
-                <div class="status-card">
-                    <span>最近请求</span>
-                    <strong id="requestText">-</strong>
-                </div>
-            </div>
-        </header>
-
-        <div id="sessionRibbon" class="session-ribbon"></div>
-
-        <section id="overview" class="surface">
-            <div class="surface-head">
-                <div>
-                    <p class="eyebrow accent">运行总览</p>
-                    <h3>网关实时快照</h3>
-                </div>
-                <button id="refreshOverview" class="secondary-button" type="button">刷新总览</button>
-            </div>
-
-            <div id="overviewCards" class="metric-grid"></div>
-
-            <div class="surface-grid two-col">
-                <article class="panel">
-                    <div class="section-head">
-                        <div>
-                            <p class="eyebrow">监控信号</p>
-                            <h4>派生指标</h4>
-                        </div>
-                    </div>
-                    <div id="overviewSignals" class="signal-stack"></div>
-                </article>
-
-                <article class="panel">
-                    <div class="section-head">
-                        <div>
-                            <p class="eyebrow">事件流</p>
-                            <h4>操作与告警</h4>
-                        </div>
-                    </div>
-                    <div id="activityFeed" class="activity-feed"></div>
-                </article>
-            </div>
-
-            <div class="surface-grid two-col">
-                <article class="panel">
-                    <div class="section-head">
-                        <div>
-                            <p class="eyebrow">令牌上下文</p>
-                            <h4>当前访问令牌</h4>
-                        </div>
-                    </div>
-                    <div id="tokenContextPanel" class="metric-grid compact-metric-grid"></div>
-                </article>
-
-                <article class="panel">
-                    <div class="section-head">
-                        <div>
-                            <p class="eyebrow">健康矩阵</p>
-                            <h4>已启用上游</h4>
-                        </div>
-                    </div>
-                    <div id="overviewServers" class="health-grid"></div>
-                </article>
-            </div>
-        </section>
-
-        <section id="managed-system" class="surface">
-            <div class="surface-head">
-                <div>
-                    <p class="eyebrow accent">受管系统</p>
-                    <h3>big-market-71772-z 控制面</h3>
-                </div>
-                <button id="bmLoadOverview" class="secondary-button" type="button">刷新系统状态</button>
-            </div>
-
-            <div class="surface-grid two-col">
-                <article class="panel">
-                    <div class="section-head">
-                        <div>
-                            <p class="eyebrow">系统信息</p>
-                            <h4>连接与能力</h4>
-                        </div>
-                    </div>
-                    <div id="bigMarketOverview" class="metric-grid compact-metric-grid"></div>
-                </article>
-
-                <article class="panel">
-                    <div class="section-head">
-                        <div>
-                            <p class="eyebrow">控制操作</p>
-                            <h4>业务接口代理</h4>
-                        </div>
-                    </div>
-                    <form id="bigMarketForm" class="form-grid compact-form">
-                        <label class="field">
-                            <span>活动 ID</span>
-                            <input id="bmActivityId" value="100301">
-                        </label>
-                        <label class="field">
-                            <span>策略 ID</span>
-                            <input id="bmStrategyId" value="100001">
-                        </label>
-                        <label class="field field-wide">
-                            <span>用户 ID</span>
-                            <input id="bmUserId" value="xiaofuge">
-                        </label>
-                        <div class="action-button-grid field-wide">
-                            <button id="bmActivityArmory" type="button" class="secondary-button">活动装配</button>
-                            <button id="bmStrategyArmory" type="button" class="secondary-button">策略装配</button>
-                            <button id="bmAwardList" type="button" class="secondary-button">查询奖品列表</button>
-                            <button id="bmUserAccount" type="button" class="secondary-button">查询活动账户</button>
-                            <button id="bmDraw" type="button" class="primary-button">执行抽奖</button>
-                        </div>
-                    </form>
-                    <pre id="bigMarketResult" class="result-console">big-market 操作结果会显示在这里。</pre>
-                </article>
-            </div>
-        </section>
-
-        <section id="resources" class="surface">
-            <div class="surface-head">
-                <div>
-                    <p class="eyebrow accent">上游资源</p>
-                    <h3>上游注册中心</h3>
-                </div>
-                <button id="loadUpstreams" class="secondary-button" type="button">刷新注册表</button>
-            </div>
-
-            <div class="management-grid">
-                <form id="upstreamForm" class="form-grid">
-                    <label class="field">
-                        <span>服务编码</span>
-                        <input name="serverCode" placeholder="weather">
-                    </label>
-                    <label class="field">
-                        <span>显示名称</span>
-                        <input name="name" placeholder="天气服务">
-                    </label>
-                    <label class="field field-wide">
-                        <span>基础地址</span>
-                        <input name="baseUrl" placeholder="https://weather.example.com/mcp">
-                    </label>
-                    <label class="field">
-                        <span>传输类型</span>
-                        <select name="transportType">
-                            <option value="HTTP">HTTP</option>
-                            <option value="SSE">SSE</option>
-                        </select>
-                    </label>
-                    <label class="field">
-                        <span>认证模式</span>
-                        <input name="authMode" value="API_KEY">
-                    </label>
-                    <label class="field">
-                        <span>超时 (ms)</span>
-                        <input name="timeoutMs" type="number" value="3000">
-                    </label>
-                    <label class="toggle-field">
-                        <input name="enabled" type="checkbox" checked>
-                        <span>创建后立即启用</span>
-                    </label>
-                    <button type="submit" class="primary-button field-wide">注册上游服务</button>
-                </form>
-                <div id="upstreamList" class="data-panel"></div>
-            </div>
-        </section>
-
-        <section id="catalog" class="surface-grid two-col">
-            <article class="surface">
-                <div class="surface-head">
-                    <div>
-                        <p class="eyebrow accent">工具目录</p>
-                        <h3>工具定义</h3>
-                    </div>
-                    <button id="loadTools" class="secondary-button" type="button">刷新工具</button>
-                </div>
-
-                <div class="management-grid">
-                    <form id="toolForm" class="form-grid">
-                        <label class="field">
-                            <span>服务编码</span>
-                            <input name="serverCode" placeholder="weather">
-                        </label>
-                        <label class="field">
-                            <span>工具名称</span>
-                            <input name="toolName" placeholder="forecast">
-                        </label>
-                        <label class="field field-wide">
-                            <span>描述</span>
-                            <input name="description" placeholder="返回模拟天气预测">
-                        </label>
-                        <label class="field field-wide">
-                            <span>输入模式</span>
-                            <textarea name="inputSchema" rows="6">{ "city": "string" }</textarea>
-                        </label>
-                        <label class="toggle-field">
-                            <input name="enabled" type="checkbox" checked>
-                            <span>创建后立即启用</span>
-                        </label>
-                        <button type="submit" class="primary-button field-wide">注册工具</button>
-                    </form>
-                    <div id="toolList" class="data-panel"></div>
-                </div>
-            </article>
-
-            <article class="surface">
-                <div class="surface-head">
-                    <div>
-                        <p class="eyebrow accent">发现视图</p>
-                        <h3>当前令牌可见工具</h3>
-                    </div>
-                    <button id="loadDiscovery" class="secondary-button" type="button">刷新发现结果</button>
-                </div>
-                <div id="discoveryList" class="tool-grid"></div>
-            </article>
-        </section>
-
-        <section id="access" class="surface-grid two-col">
-            <article class="surface">
-                <div class="surface-head">
-                    <div>
-                        <p class="eyebrow accent">访问控制</p>
-                        <h3>策略矩阵</h3>
-                    </div>
-                    <button id="loadPolicies" class="secondary-button" type="button">刷新策略</button>
-                </div>
-
-                <div class="management-grid">
-                    <form id="policyForm" class="form-grid">
-                        <label class="field">
-                            <span>主体类型</span>
-                            <select name="subjectType">
-                                <option value="CLIENT">CLIENT</option>
-                                <option value="ROLE">ROLE</option>
-                            </select>
-                        </label>
-                        <label class="field">
-                            <span>主体标识</span>
-                            <input name="subjectId" placeholder="demo-app 或 APP">
-                        </label>
-                        <label class="field field-wide">
-                            <span>工具标识</span>
-                            <input name="toolIdentifier" placeholder="weather:forecast">
-                        </label>
-                        <label class="field">
-                            <span>决策</span>
-                            <select name="decision">
-                                <option value="ALLOW">ALLOW</option>
-                                <option value="DENY">DENY</option>
-                            </select>
-                        </label>
-                        <label class="field">
-                            <span>原因</span>
-                            <input name="reason" placeholder="仅允许演示调用方">
-                        </label>
-                        <label class="toggle-field">
-                            <input name="enabled" type="checkbox" checked>
-                            <span>保存后立即生效</span>
-                        </label>
-                        <button type="submit" class="primary-button field-wide">保存策略</button>
-                    </form>
-                    <div id="policyList" class="data-panel"></div>
-                </div>
-            </article>
-
-            <article class="surface">
-                <div class="surface-head">
-                    <div>
-                        <p class="eyebrow accent">调用实验室</p>
-                        <h3>工具调用</h3>
-                    </div>
-                </div>
-
-                <div class="lab-grid">
-                    <form id="invokeForm" class="form-grid compact-form">
-                        <label class="field field-wide">
-                            <span>工具标识</span>
-                            <input name="toolIdentifier" placeholder="weather:forecast">
-                        </label>
-                        <label class="field field-wide">
-                            <span>参数 JSON</span>
-                            <textarea name="arguments" rows="9">{ "city": "上海", "days": 2 }</textarea>
-                        </label>
-                        <button type="submit" class="primary-button field-wide">执行工具调用</button>
-                    </form>
-                    <pre id="invokeResult" class="result-console">工具调用结果会显示在这里。</pre>
-                </div>
-            </article>
-        </section>
-    </main>
+    </div>
 </div>
 
-<script src="/assets/app.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="/assets/config.js"></script>
+<script src="/assets/access.js"></script>
 </body>
 </html>

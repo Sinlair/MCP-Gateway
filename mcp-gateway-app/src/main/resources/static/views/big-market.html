@@ -1,0 +1,79 @@
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-3 mb-4 border-bottom">
+    <h1 class="page-title">big-market 操作台</h1>
+    <div>
+        <button class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" id="refreshBigMarketBtn">
+            <i class="bi bi-arrow-clockwise"></i> 刷新状态
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-5 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-diagram-3"></i> 系统快照
+            </div>
+            <div class="card-body">
+                <div class="metric-grid" id="bigMarketOverviewGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-joystick"></i> 常用动作
+            </div>
+            <div class="card-body">
+                <form id="bigMarketForm">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">活动 ID</label>
+                            <input type="number" class="form-control" id="bmActivityId" value="100301">
+                        </div>
+                        <div class="col-md-4 mt-3 mt-md-0">
+                            <label class="form-label">策略 ID</label>
+                            <input type="number" class="form-control" id="bmStrategyId" value="100001">
+                        </div>
+                        <div class="col-md-4 mt-3 mt-md-0">
+                            <label class="form-label">用户 ID</label>
+                            <input type="text" class="form-control" id="bmUserId" value="xiaofuge">
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-4">
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-outline-primary w-100" id="bmActivityArmory">
+                                <i class="bi bi-box2-heart me-1"></i> 活动装配
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-outline-primary w-100" id="bmStrategyArmory">
+                                <i class="bi bi-cpu me-1"></i> 策略装配
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-outline-primary w-100" id="bmAwardList">
+                                <i class="bi bi-gift me-1"></i> 查询奖品列表
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-outline-primary w-100" id="bmUserAccount">
+                                <i class="bi bi-wallet2 me-1"></i> 查询活动账户
+                            </button>
+                        </div>
+                        <div class="col-12">
+                            <button type="button" class="btn btn-primary w-100" id="bmDraw">
+                                <i class="bi bi-stars me-1"></i> 执行抽奖
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="result-panel">
+                    <pre class="mb-0" id="bigMarketResult">big-market 操作结果会显示在这里。</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

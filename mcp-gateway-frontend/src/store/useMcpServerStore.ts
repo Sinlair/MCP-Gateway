@@ -15,7 +15,8 @@ const defaultTransport = allowedTransports.includes(
   ? (process.env.NEXT_PUBLIC_MCP_TRANSPORT as TransportType)
   : "sse";
 const defaultEndpoint =
-  process.env.NEXT_PUBLIC_MCP_ENDPOINT ?? "http://localhost:3000/mcp";
+  process.env.NEXT_PUBLIC_MCP_ENDPOINT ??
+  "http://localhost:8080/mcp?api_key=demo-admin-key&environment=dev";
 const defaultName = process.env.NEXT_PUBLIC_MCP_NAME ?? "Local MCP Server";
 
 const defaultServers: McpServer[] = [
