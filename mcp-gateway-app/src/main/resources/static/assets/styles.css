@@ -2,9 +2,9 @@
     --bg: #0b1220;
     --bg-2: #111a2a;
     --bg-3: #152133;
-    --surface: rgba(16, 26, 41, 0.88);
-    --surface-2: rgba(22, 33, 51, 0.88);
-    --surface-3: rgba(9, 17, 29, 0.76);
+    --surface: rgba(13, 21, 34, 0.94);
+    --surface-2: rgba(18, 28, 43, 0.94);
+    --surface-3: rgba(10, 18, 29, 0.92);
     --ink: #e8f1fb;
     --muted: #8ea2bb;
     --line: rgba(153, 176, 204, 0.18);
@@ -32,12 +32,12 @@ html {
 body {
     margin: 0;
     min-height: 100vh;
-    font-family: "Aptos", "Segoe UI Variable", "Bahnschrift", sans-serif;
+    font-family: "Segoe UI Variable", "Aptos", "Bahnschrift", sans-serif;
     color: var(--ink);
     background:
-        radial-gradient(circle at top left, rgba(62, 207, 142, 0.16), transparent 24rem),
-        radial-gradient(circle at 85% 10%, rgba(85, 182, 255, 0.12), transparent 22rem),
-        linear-gradient(180deg, var(--bg), var(--bg-2) 40%, #0f1625 100%);
+        radial-gradient(circle at top left, rgba(62, 207, 142, 0.12), transparent 24rem),
+        radial-gradient(circle at 85% 10%, rgba(85, 182, 255, 0.08), transparent 20rem),
+        linear-gradient(180deg, #09111c, var(--bg) 24%, var(--bg-2) 58%, #0c1422 100%);
 }
 
 body::before {
@@ -66,24 +66,34 @@ body::before {
 }
 
 .gate-shell {
-    width: min(1220px, 100%);
+    width: min(1180px, 100%);
     display: grid;
-    grid-template-columns: 1.2fr 0.9fr 0.8fr;
-    gap: 18px;
+    grid-template-columns: 1.15fr 0.95fr;
+    gap: 16px;
+    align-items: stretch;
 }
 
 .gate-panel {
-    padding: 22px;
-    border-radius: 22px;
+    padding: 20px;
+    border-radius: 18px;
     border: 1px solid var(--line);
-    background: linear-gradient(180deg, rgba(15, 24, 38, 0.94), rgba(18, 28, 43, 0.88));
+    background: linear-gradient(180deg, rgba(12, 20, 33, 0.96), rgba(14, 23, 36, 0.92));
     box-shadow: var(--shadow);
 }
 
 .gate-panel-primary {
     background:
-        radial-gradient(circle at top right, rgba(62, 207, 142, 0.14), transparent 12rem),
-        linear-gradient(180deg, rgba(15, 24, 38, 0.96), rgba(18, 28, 43, 0.88));
+        linear-gradient(180deg, rgba(11, 19, 31, 0.96), rgba(14, 23, 36, 0.92));
+    position: relative;
+}
+
+.gate-panel-primary::after {
+    content: "";
+    position: absolute;
+    inset: 20px 20px auto 20px;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), rgba(62, 207, 142, 0));
 }
 
 .gate-panel h1,
@@ -96,6 +106,7 @@ body::before {
     font-size: clamp(2rem, 3vw, 3.2rem);
     line-height: 1.04;
     max-width: 12ch;
+    margin-top: 16px;
 }
 
 .gate-panel h2 {
@@ -114,6 +125,10 @@ body::before {
     padding-left: 18px;
     color: #dbe8f5;
     line-height: 1.7;
+}
+
+.gate-shell > .gate-panel:last-child {
+    grid-column: 2;
 }
 
 .gate-actions {
@@ -144,7 +159,7 @@ body::before {
     position: relative;
     z-index: 1;
     display: grid;
-    grid-template-columns: 280px minmax(0, 1fr);
+    grid-template-columns: 256px minmax(0, 1fr);
     min-height: 100vh;
 }
 
@@ -154,11 +169,11 @@ body::before {
     height: 100vh;
     display: grid;
     align-content: start;
-    gap: 18px;
-    padding: 24px 18px;
+    gap: 14px;
+    padding: 18px 16px;
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 18%),
-        linear-gradient(180deg, #0d1523, #10192a);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 18%),
+        linear-gradient(180deg, #0b131f, #0f1827);
     border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 
@@ -210,17 +225,19 @@ body::before {
 
 .rail-link {
     display: block;
-    padding: 11px 14px;
-    border-radius: 14px;
+    padding: 10px 12px;
+    border-radius: 10px;
     color: #d9e6f3;
     text-decoration: none;
     transition: background 160ms ease, transform 160ms ease, color 160ms ease;
+    border: 1px solid transparent;
 }
 
 .rail-link:hover {
     color: #ffffff;
-    background: rgba(255, 255, 255, 0.08);
-    transform: translateX(2px);
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(153, 176, 204, 0.12);
+    transform: translateX(1px);
 }
 
 .rail-card,
@@ -234,9 +251,9 @@ body::before {
 
 .rail-card,
 .rail-note {
-    padding: 16px;
-    border-radius: 18px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.03));
+    padding: 14px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.025));
 }
 
 .rail-note {
@@ -335,7 +352,7 @@ button:disabled {
 }
 
 .workspace {
-    padding: 24px;
+    padding: 18px 20px 24px;
 }
 
 .masthead {
@@ -343,7 +360,7 @@ button:disabled {
     justify-content: space-between;
     align-items: flex-start;
     gap: 18px;
-    margin-bottom: 24px;
+    margin-bottom: 18px;
 }
 
 .masthead h2 {
@@ -366,9 +383,9 @@ button:disabled {
 }
 
 .signal-card {
-    padding: 16px 18px;
-    border-radius: 18px;
-    background: linear-gradient(180deg, rgba(18, 29, 45, 0.96), rgba(14, 23, 36, 0.88));
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(15, 24, 38, 0.98), rgba(12, 20, 31, 0.92));
 }
 
 .signal-card strong {
@@ -377,10 +394,10 @@ button:disabled {
 }
 
 .surface {
-    margin-bottom: 24px;
-    padding: 20px;
-    border-radius: 22px;
-    background: linear-gradient(180deg, rgba(15, 24, 38, 0.92), rgba(17, 27, 42, 0.86));
+    margin-bottom: 18px;
+    padding: 18px;
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(11, 19, 31, 0.96), rgba(14, 22, 34, 0.92));
     backdrop-filter: blur(14px);
     animation: surface-in 360ms ease both;
 }
@@ -414,21 +431,33 @@ button:disabled {
     justify-content: space-between;
     align-items: center;
     gap: 12px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(153, 176, 204, 0.08);
 }
 
 .metric-grid {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 14px;
-    margin-bottom: 18px;
+    gap: 12px;
+    margin-bottom: 14px;
 }
 
 .metric-card {
-    padding: 16px;
-    border-radius: 18px;
+    padding: 14px;
+    border-radius: 12px;
     border: 1px solid rgba(153, 176, 204, 0.14);
-    background: linear-gradient(180deg, rgba(17, 28, 44, 0.94), rgba(12, 19, 31, 0.82));
+    background: linear-gradient(180deg, rgba(16, 26, 41, 0.98), rgba(12, 20, 31, 0.92));
+    position: relative;
+}
+
+.metric-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(62, 207, 142, 0.42), rgba(62, 207, 142, 0));
 }
 
 .metric-card strong {
@@ -466,9 +495,9 @@ button:disabled {
 }
 
 .panel {
-    padding: 18px;
-    border-radius: 18px;
-    background: linear-gradient(180deg, rgba(9, 17, 29, 0.92), rgba(14, 22, 35, 0.88));
+    padding: 16px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(9, 17, 29, 0.96), rgba(13, 20, 31, 0.92));
 }
 
 .signal-stack,
@@ -509,6 +538,9 @@ button:disabled {
 
 .activity-feed {
     min-height: 182px;
+    max-height: 320px;
+    overflow: auto;
+    padding-right: 4px;
 }
 
 .activity-line {
@@ -556,8 +588,8 @@ button:disabled {
 }
 
 .health-card {
-    padding: 14px;
-    border-radius: 16px;
+    padding: 13px;
+    border-radius: 12px;
     border: 1px solid rgba(153, 176, 204, 0.14);
     background: linear-gradient(180deg, rgba(17, 27, 42, 0.92), rgba(10, 18, 30, 0.88));
 }
@@ -582,8 +614,10 @@ button:disabled {
 .tool-grid,
 .result-console {
     min-height: 140px;
+    max-height: 540px;
+    overflow: auto;
     padding: 14px;
-    border-radius: 18px;
+    border-radius: 14px;
     border: 1px solid rgba(153, 176, 204, 0.14);
     background: linear-gradient(180deg, rgba(9, 17, 29, 0.92), rgba(13, 20, 31, 0.86));
 }
@@ -598,7 +632,7 @@ button:disabled {
 .tool-card {
     min-width: 220px;
     padding: 12px 14px;
-    border-radius: 16px;
+    border-radius: 12px;
     background: rgba(19, 31, 47, 0.94);
     border: 1px solid rgba(153, 176, 204, 0.14);
 }
@@ -619,6 +653,13 @@ button:disabled {
     gap: 8px;
 }
 
+.field span,
+.toggle-field span,
+.table thead th {
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+}
+
 .field-wide {
     grid-column: 1 / -1;
 }
@@ -634,8 +675,8 @@ select,
 textarea {
     width: 100%;
     border: 1px solid rgba(153, 176, 204, 0.18);
-    border-radius: 14px;
-    padding: 12px 14px;
+    border-radius: 10px;
+    padding: 10px 12px;
     font: inherit;
     background: rgba(10, 18, 30, 0.86);
     color: var(--ink);
@@ -660,7 +701,7 @@ textarea {
     align-items: center;
     gap: 10px;
     padding: 10px 12px;
-    border-radius: 14px;
+    border-radius: 10px;
     border: 1px solid rgba(153, 176, 204, 0.18);
     background: rgba(10, 18, 30, 0.86);
 }
@@ -673,8 +714,8 @@ textarea {
 .primary-button,
 .secondary-button,
 .inline-button {
-    border-radius: 14px;
-    padding: 12px 16px;
+    border-radius: 10px;
+    padding: 10px 14px;
 }
 
 .primary-button {
@@ -708,6 +749,10 @@ textarea {
     vertical-align: top;
     font-size: 0.94rem;
     line-height: 1.45;
+}
+
+.table tbody tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
 }
 
 .table code {
@@ -763,6 +808,7 @@ textarea {
     background:
         linear-gradient(180deg, rgba(6, 12, 20, 0.96), rgba(11, 17, 27, 0.94));
     color: #d9ecff;
+    line-height: 1.55;
 }
 
 @media (max-width: 1280px) {

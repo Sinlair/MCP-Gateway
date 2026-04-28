@@ -1,7 +1,10 @@
 package com.mcpgateway.app.console;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.JWTVerifier;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.interfaces.Claim;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.mcpgateway.app.console.dto.ConsoleAuditResponse;
 import com.mcpgateway.app.console.dto.ConsoleSessionResponse;
 import com.mcpgateway.app.console.dto.ConsoleTokenIssueRequest;
@@ -10,33 +13,24 @@ import com.mcpgateway.domain.security.model.GatewayClient;
 import com.mcpgateway.domain.security.repository.GatewayClientRepository;
 import com.mcpgateway.types.enums.ResponseCode;
 import com.mcpgateway.types.exception.AppException;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Base64;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ConsoleTokenService {
 
-    private static final Base64.Encoder BASE64_URL_ENCODER = Base64.getUrlEncoder().withoutPadding();
-    private static final Base64.Decoder BASE64_URL_DECODER = Base64.getUrlDecoder();
-
     private final GatewayClientRepository gatewayClientRepository;
     private final ConsoleTokenProperties consoleTokenProperties;
-    private final ObjectMapper objectMapper;
+    private final Algorithm jwtAlgorithm;
+    private final JWTVerifier jwtVerifier;
 
     private final ConcurrentMap<String, ConsoleTokenSession> activeTokenSessions = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Instant> revokedTokenIds = new ConcurrentHashMap<>();
@@ -44,12 +38,15 @@ public class ConsoleTokenService {
 
     public ConsoleTokenService(
             GatewayClientRepository gatewayClientRepository,
-            ConsoleTokenProperties consoleTokenProperties,
-            ObjectMapper objectMapper
+            ConsoleTokenProperties consoleTokenProperties
     ) {
         this.gatewayClientRepository = gatewayClientRepository;
         this.consoleTokenProperties = consoleTokenProperties;
-        this.objectMapper = objectMapper;
+        this.jwtAlgorithm = Algorithm.HMAC256(consoleTokenProperties.getSecret());
+        this.jwtVerifier = JWT.require(jwtAlgorithm)
+                .withIssuer(consoleTokenProperties.getIssuer())
+                .acceptLeeway(consoleTokenProperties.getClockSkewSeconds())
+                .build();
     }
 
     public ConsoleTokenResponse issueDemoToken(ConsoleTokenIssueRequest request) {
@@ -216,38 +213,22 @@ public class ConsoleTokenService {
 
     private ConsoleTokenClaims verifyAndDecode(String accessToken) {
         try {
-            String[] segments = accessToken.split("\\.");
-            if (segments.length != 3) {
-                throw new AppException(ResponseCode.UNAUTHORIZED, "控制台访问令牌格式无效");
-            }
-
-            String unsignedToken = segments[0] + "." + segments[1];
-            byte[] expectedSignature = signBytes(unsignedToken);
-            byte[] providedSignature = BASE64_URL_DECODER.decode(segments[2]);
-            if (!MessageDigest.isEqual(expectedSignature, providedSignature)) {
-                throw new AppException(ResponseCode.UNAUTHORIZED, "控制台访问令牌签名校验失败");
-            }
-
-            JsonNode payload = objectMapper.readTree(BASE64_URL_DECODER.decode(segments[1]));
-            if (!consoleTokenProperties.getIssuer().equals(payload.path("iss").asText())) {
-                throw new AppException(ResponseCode.UNAUTHORIZED, "控制台访问令牌签发方不匹配");
-            }
-
-            Instant issuedAt = Instant.ofEpochSecond(payload.path("iat").asLong());
-            Instant expiresAt = Instant.ofEpochSecond(payload.path("exp").asLong());
+            DecodedJWT decodedJWT = jwtVerifier.verify(accessToken);
+            Instant issuedAt = decodedJWT.getIssuedAt().toInstant();
+            Instant expiresAt = decodedJWT.getExpiresAt().toInstant();
             if (expiresAt.plusSeconds(consoleTokenProperties.getClockSkewSeconds()).isBefore(Instant.now())) {
                 throw new AppException(ResponseCode.UNAUTHORIZED, "控制台访问令牌已过期");
             }
 
             return new ConsoleTokenClaims(
-                    payload.path("jti").asText(),
-                    payload.path("sub").asText(),
-                    payload.path("env").asText(),
+                    decodedJWT.getId(),
+                    decodedJWT.getSubject(),
+                    decodedJWT.getClaim("env").asString(),
                     issuedAt,
                     expiresAt,
-                    readStringList(payload.path("roles")),
-                    readStringList(payload.path("scopes")),
-                    readStringList(payload.path("systems"))
+                    readStringList(decodedJWT.getClaim("roles")),
+                    readStringList(decodedJWT.getClaim("scopes")),
+                    readStringList(decodedJWT.getClaim("systems"))
             );
         } catch (AppException e) {
             throw e;
@@ -258,38 +239,20 @@ public class ConsoleTokenService {
 
     private String sign(ConsoleTokenClaims claims) {
         try {
-            Map<String, Object> header = Map.of(
-                    "alg", "HS256",
-                    "typ", "JWT"
-            );
-            Map<String, Object> payload = new LinkedHashMap<>();
-            payload.put("iss", consoleTokenProperties.getIssuer());
-            payload.put("sub", claims.subject());
-            payload.put("env", claims.environment());
-            payload.put("jti", claims.tokenId());
-            payload.put("iat", claims.issuedAt().getEpochSecond());
-            payload.put("exp", claims.expiresAt().getEpochSecond());
-            payload.put("roles", claims.roles());
-            payload.put("scopes", claims.scopes());
-            payload.put("systems", claims.managedSystems());
-
-            String encodedHeader = BASE64_URL_ENCODER.encodeToString(objectMapper.writeValueAsBytes(header));
-            String encodedPayload = BASE64_URL_ENCODER.encodeToString(objectMapper.writeValueAsBytes(payload));
-            String unsignedToken = encodedHeader + "." + encodedPayload;
-            String signature = BASE64_URL_ENCODER.encodeToString(signBytes(unsignedToken));
-            return unsignedToken + "." + signature;
+            return JWT.create()
+                    .withIssuer(consoleTokenProperties.getIssuer())
+                    .withJWTId(claims.tokenId())
+                    .withSubject(claims.subject())
+                    .withIssuedAt(java.util.Date.from(claims.issuedAt()))
+                    .withExpiresAt(java.util.Date.from(claims.expiresAt()))
+                    .withClaim("env", claims.environment())
+                    .withArrayClaim("roles", claims.roles().toArray(String[]::new))
+                    .withArrayClaim("scopes", claims.scopes().toArray(String[]::new))
+                    .withArrayClaim("systems", claims.managedSystems().toArray(String[]::new))
+                    .sign(jwtAlgorithm);
         } catch (Exception e) {
             throw new AppException(ResponseCode.SYSTEM_ERROR, "控制台访问令牌签发失败");
         }
-    }
-
-    private byte[] signBytes(String unsignedToken) throws Exception {
-        Mac mac = Mac.getInstance("HmacSHA256");
-        mac.init(new SecretKeySpec(
-                consoleTokenProperties.getSecret().getBytes(StandardCharsets.UTF_8),
-                "HmacSHA256"
-        ));
-        return mac.doFinal(unsignedToken.getBytes(StandardCharsets.UTF_8));
     }
 
     private List<String> resolveScopes(GatewayClient gatewayClient, List<String> requestedScopes) {
@@ -318,12 +281,9 @@ public class ConsoleTokenService {
         return managedSystems;
     }
 
-    private List<String> readStringList(JsonNode node) {
-        List<String> values = new ArrayList<>();
-        if (node != null && node.isArray()) {
-            node.forEach(item -> values.add(item.asText()));
-        }
-        return values;
+    private List<String> readStringList(Claim claim) {
+        List<String> values = claim.asList(String.class);
+        return values == null ? List.of() : values;
     }
 
     private ConsoleTokenResponse toTokenResponse(ConsoleTokenSession session) {
