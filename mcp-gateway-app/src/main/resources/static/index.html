@@ -8,73 +8,101 @@
 </head>
 <body>
 <section id="accessGate" class="access-gate">
-    <div class="gate-shell">
-        <article class="gate-panel gate-panel-primary">
-            <p class="eyebrow accent">MCP Gateway</p>
-            <h1>令牌驱动的系统操作与监控入口</h1>
-            <p class="gate-copy">
-                这里不是传统账号密码后台。你需要先由 MCP Gateway 签发访问令牌，
-                再使用这个令牌进入中文监控控制台。控制台会根据令牌自动决定：
-                当前可访问的系统、可见工具、可执行操作以及权限范围。
-            </p>
-            <ul class="gate-list">
-                <li>网关负责：签发访问令牌、管理受管系统能力、治理工具暴露</li>
-                <li>控制台负责：用 token 驱动系统操作、运行监控、策略与调用实验</li>
-                <li>当前受管系统：`big-market-71772-z`</li>
-            </ul>
-        </article>
-
-        <article class="gate-panel">
-            <p class="eyebrow">访问控制台</p>
-            <h2>输入访问令牌</h2>
-            <label class="field field-wide">
-                <span>Bearer Token</span>
-                <textarea id="gateTokenInput" rows="5" placeholder="粘贴由 MCP Gateway 签发的访问令牌"></textarea>
-            </label>
-            <div class="gate-actions">
-                <button id="gateEnterButton" class="primary-button" type="button">进入控制台</button>
-                <button id="gateClearButton" class="secondary-button" type="button">清空</button>
+    <div class="gate-layout">
+        <aside class="gate-story">
+            <div class="brand-lockup">
+                <div class="brand-badge">MG</div>
+                <div>
+                    <p class="eyebrow accent">MCP Gateway</p>
+                    <h1>令牌驱动的系统控制入口</h1>
+                </div>
             </div>
-            <p id="gateMessage" class="gate-message">支持 URL `?token=...` 自动带入，也会记住本地最近一次令牌。</p>
-        </article>
 
-        <article class="gate-panel">
-            <p class="eyebrow">本地演示</p>
-            <h2>快速获取演示令牌</h2>
             <p class="gate-copy">
-                仅用于本地验证控制台访问模型。生产环境应由 MCP Gateway 在配置流程中签发正式令牌。
+                这里不是传统账号密码后台，而是网关签发令牌之后的控制台入口。
+                用户拿到访问令牌后，系统会自动识别他可访问的环境、受管系统、工具范围和控制权限。
             </p>
-            <div class="gate-actions stacked">
-                <button id="issueAdminTokenButton" class="primary-button" type="button">签发演示管理员令牌</button>
-                <button id="issueAppTokenButton" class="secondary-button" type="button">签发演示调用方令牌</button>
+
+            <div class="story-grid">
+                <article class="story-card">
+                    <p class="eyebrow">阶段一</p>
+                    <h2>网关签发令牌</h2>
+                    <p>令牌绑定 profile、roles、scopes、managedSystems 与 environment。</p>
+                </article>
+                <article class="story-card">
+                    <p class="eyebrow">阶段二</p>
+                    <h2>控制台验证令牌</h2>
+                    <p>控制台只接受 Bearer Token，并基于它装载可见模块和可执行动作。</p>
+                </article>
+                <article class="story-card">
+                    <p class="eyebrow">阶段三</p>
+                    <h2>进入监控与控制面</h2>
+                    <p>当前默认受管系统是 `big-market-71772-z`，同时保留网关运行态与工具治理视图。</p>
+                </article>
             </div>
-        </article>
+        </aside>
+
+        <main class="gate-workbench">
+            <article class="gate-panel">
+                <div class="section-head">
+                    <div>
+                        <p class="eyebrow">访问控制台</p>
+                        <h2>输入访问令牌</h2>
+                    </div>
+                </div>
+                <label class="field field-wide">
+                    <span>Bearer Token</span>
+                    <textarea id="gateTokenInput" rows="6" placeholder="粘贴由 MCP Gateway 签发的访问令牌"></textarea>
+                </label>
+                <div class="button-row">
+                    <button id="gateEnterButton" class="primary-button" type="button">进入控制台</button>
+                    <button id="gateClearButton" class="secondary-button" type="button">清空</button>
+                </div>
+                <p id="gateMessage" class="gate-message">支持 URL `?token=...` 自动带入，也会记住本地最近一次令牌。</p>
+            </article>
+
+            <article class="gate-panel">
+                <div class="section-head">
+                    <div>
+                        <p class="eyebrow">本地演示</p>
+                        <h2>快速签发测试令牌</h2>
+                    </div>
+                </div>
+                <p class="gate-copy compact">
+                    本地环境可直接签发演示令牌。生产环境应由 MCP Gateway 的系统配置流程签发正式令牌。
+                </p>
+                <div class="stack-actions">
+                    <button id="issueAdminTokenButton" class="primary-button" type="button">签发演示管理员令牌</button>
+                    <button id="issueAppTokenButton" class="secondary-button" type="button">签发演示调用方令牌</button>
+                </div>
+            </article>
+        </main>
     </div>
 </section>
 
 <div id="consoleApp" class="console-shell hidden">
-    <aside class="ops-rail">
-        <div class="rail-brand">
+    <aside class="sidebar">
+        <div class="sidebar-brand">
             <div class="brand-badge">MG</div>
             <div>
-                <p class="eyebrow">可观测控制台</p>
+                <p class="eyebrow">控制平面</p>
                 <h1>MCP 网关</h1>
             </div>
         </div>
 
-        <nav class="rail-nav">
-            <a href="#overview" class="rail-link">总览</a>
-            <a href="#managed-system" class="rail-link">受管系统</a>
-            <a href="#resources" class="rail-link">上游资源</a>
-            <a href="#catalog" class="rail-link">工具目录</a>
-            <a href="#access" class="rail-link">访问控制</a>
+        <nav class="sidebar-nav">
+            <a href="#overview" class="sidebar-link">总览</a>
+            <a href="#managed-system" class="sidebar-link">受管系统</a>
+            <a href="#resources" class="sidebar-link">上游资源</a>
+            <a href="#catalog" class="sidebar-link">工具目录</a>
+            <a href="#access" class="sidebar-link">访问控制</a>
         </nav>
 
-        <section class="rail-card">
+        <section class="sidebar-card">
             <p class="eyebrow">令牌会话</p>
             <h2 id="activeProfile">-</h2>
             <code id="activeCredential" class="token-line">-</code>
-            <div class="rail-meta">
+            <div class="sidebar-meta">
                 <div>
                     <span>认证方式</span>
                     <strong>Bearer Token</strong>
@@ -92,43 +120,43 @@
                     <strong id="activeExpiresAt">-</strong>
                 </div>
             </div>
-            <div class="rail-actions">
+            <div class="sidebar-actions">
                 <button id="switchAdminTokenButton" class="secondary-button" type="button">切换管理员令牌</button>
                 <button id="switchAppTokenButton" class="secondary-button" type="button">切换调用方令牌</button>
-                <button id="logoutTokenButton" class="inline-button" type="button">退出令牌</button>
+                <button id="logoutTokenButton" class="ghost-button" type="button">退出令牌</button>
             </div>
         </section>
 
-        <section class="rail-note">
-            <p class="eyebrow">模型</p>
+        <section class="sidebar-note">
+            <p class="eyebrow">模型说明</p>
             <p>
-                MCP Gateway 负责签发访问令牌和管理系统能力；
-                控制台网站负责基于 token 执行系统操作、运行监控和调用实验。
+                MCP Gateway 负责签发访问令牌与管理受管系统能力；控制台网站负责基于 token 执行系统操作、监控和实验。
             </p>
         </section>
     </aside>
 
-    <main class="workspace">
-        <header class="masthead">
+    <main class="main-stack">
+        <header class="topbar">
             <div>
                 <p class="eyebrow accent">MCP 网关监控控制台</p>
-                <h2>用访问令牌进入受管系统控制面与运行监控面</h2>
-                <p class="masthead-copy">
-                    当前控制台以 token 为唯一访问凭证。令牌决定你可以查看哪些上游服务、工具和策略，
-                    也决定你是否有权限控制 `big-market-71772-z` 这样的受管系统。
+                <h2>令牌驱动的系统操作、运行监控与工具治理入口</h2>
+                <p class="topbar-copy">
+                    当前控制台以 token 为唯一访问凭证。令牌决定可见环境、可见工具、可操作系统以及可用控制动作。
                 </p>
             </div>
-            <div class="masthead-status">
-                <div class="signal-card">
+            <div class="status-pair">
+                <div class="status-card">
                     <span>系统状态</span>
                     <strong id="statusText">就绪</strong>
                 </div>
-                <div class="signal-card">
+                <div class="status-card">
                     <span>最近请求</span>
                     <strong id="requestText">-</strong>
                 </div>
             </div>
         </header>
+
+        <div id="sessionRibbon" class="session-ribbon"></div>
 
         <section id="overview" class="surface">
             <div class="surface-head">
@@ -141,11 +169,11 @@
 
             <div id="overviewCards" class="metric-grid"></div>
 
-            <div class="overview-grid">
+            <div class="surface-grid two-col">
                 <article class="panel">
-                    <div class="panel-head">
+                    <div class="section-head">
                         <div>
-                            <p class="eyebrow accent">监控信号</p>
+                            <p class="eyebrow">监控信号</p>
                             <h4>派生指标</h4>
                         </div>
                     </div>
@@ -153,9 +181,9 @@
                 </article>
 
                 <article class="panel">
-                    <div class="panel-head">
+                    <div class="section-head">
                         <div>
-                            <p class="eyebrow accent">事件流</p>
+                            <p class="eyebrow">事件流</p>
                             <h4>操作与告警</h4>
                         </div>
                     </div>
@@ -163,21 +191,21 @@
                 </article>
             </div>
 
-            <div class="overview-grid">
+            <div class="surface-grid two-col">
                 <article class="panel">
-                    <div class="panel-head">
+                    <div class="section-head">
                         <div>
-                            <p class="eyebrow accent">令牌上下文</p>
+                            <p class="eyebrow">令牌上下文</p>
                             <h4>当前访问令牌</h4>
                         </div>
                     </div>
-                    <div id="tokenContextPanel" class="token-context-grid"></div>
+                    <div id="tokenContextPanel" class="metric-grid compact-metric-grid"></div>
                 </article>
 
                 <article class="panel">
-                    <div class="panel-head">
+                    <div class="section-head">
                         <div>
-                            <p class="eyebrow accent">健康矩阵</p>
+                            <p class="eyebrow">健康矩阵</p>
                             <h4>已启用上游</h4>
                         </div>
                     </div>
@@ -195,25 +223,25 @@
                 <button id="bmLoadOverview" class="secondary-button" type="button">刷新系统状态</button>
             </div>
 
-            <div class="overview-grid">
+            <div class="surface-grid two-col">
                 <article class="panel">
-                    <div class="panel-head">
+                    <div class="section-head">
                         <div>
-                            <p class="eyebrow accent">系统信息</p>
+                            <p class="eyebrow">系统信息</p>
                             <h4>连接与能力</h4>
                         </div>
                     </div>
-                    <div id="bigMarketOverview" class="system-overview-grid"></div>
+                    <div id="bigMarketOverview" class="metric-grid compact-metric-grid"></div>
                 </article>
 
                 <article class="panel">
-                    <div class="panel-head">
+                    <div class="section-head">
                         <div>
-                            <p class="eyebrow accent">控制操作</p>
+                            <p class="eyebrow">控制操作</p>
                             <h4>业务接口代理</h4>
                         </div>
                     </div>
-                    <form id="bigMarketForm" class="form-grid compact-grid">
+                    <form id="bigMarketForm" class="form-grid compact-form">
                         <label class="field">
                             <span>活动 ID</span>
                             <input id="bmActivityId" value="100301">
@@ -287,7 +315,7 @@
             </div>
         </section>
 
-        <section id="catalog" class="workspace-grid">
+        <section id="catalog" class="surface-grid two-col">
             <article class="surface">
                 <div class="surface-head">
                     <div>
@@ -337,7 +365,7 @@
             </article>
         </section>
 
-        <section id="access" class="workspace-grid">
+        <section id="access" class="surface-grid two-col">
             <article class="surface">
                 <div class="surface-head">
                     <div>
@@ -394,7 +422,7 @@
                 </div>
 
                 <div class="lab-grid">
-                    <form id="invokeForm" class="form-grid">
+                    <form id="invokeForm" class="form-grid compact-form">
                         <label class="field field-wide">
                             <span>工具标识</span>
                             <input name="toolIdentifier" placeholder="weather:forecast">

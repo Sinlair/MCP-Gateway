@@ -140,6 +140,20 @@ const syncSessionIdentity = () => {
   $("#activeEnvironment").textContent = state.session.environment;
   $("#activeRoles").textContent = state.session.roles.join(", ");
   $("#activeExpiresAt").textContent = new Date(state.session.expiresAt).toLocaleString("zh-CN");
+  $("#sessionRibbon").innerHTML = [
+    ["当前身份", state.session.profile],
+    ["令牌范围", state.session.scopes.join(", ")],
+    ["系统范围", state.session.managedSystems.join(", ")],
+    ["过期时间", new Date(state.session.expiresAt).toLocaleString("zh-CN")],
+  ]
+    .map(
+      ([label, value]) => `
+        <article class="session-chip">
+          <span>${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
+        </article>`
+    )
+    .join("");
   $("#tokenContextPanel").innerHTML = [
     ["访问画像", state.session.profile, "当前控制台令牌绑定的调用方身份"],
     ["令牌编号", state.session.tokenId, "可用于撤销、审计和问题排查"],
