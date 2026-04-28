@@ -1,0 +1,226 @@
+import { useCallback, useMemo } from "react";
+
+import { JsonRpcClient } from "@/lib/jsonrpc";
+import {
+  SseTransport,
+  StdioTransport,
+  WebSocketTransport,
+  type McpTransport,
+} from "@/lib/transports";
+import { useMcpServerStore } from "@/store/useMcpServerStore";
+import type {
+  McpServer,
+  McpServerCapabilities,
+  TrafficEntry,
+  JsonRpcMessage,
+} from "@/types";
+
+const clientRegistry = new Map<string, JsonRpcClient>();
+
+function createTransport(server: McpServer): McpTransport {
+  const baseOptions = {
+    endpoint: server.endpoint,
+    heartbeatIntervalMs: 15000,
+    heartbeatTimeoutMs: 45000,
+    reconnectAttempts: 5,
+    reconnectDelayMs: 1000,
+  };
+  switch (server.transport) {
+    case "sse":
+      return new SseTransport(baseOptions);
+    case "websocket":
+      return new WebSocketTransport(baseOptions);
+    case "stdio":
+      return new StdioTransport(baseOptions);
+    default:
+      return new SseTransport(baseOptions);
+  }
+}
+
+function buildTrafficEntry(
+  serverId: string,
+  direction: "inbound" | "outbound",
+  kind: TrafficEntry["kind"],
+  payload: JsonRpcMessage
+): TrafficEntry {
+  return {
+    id: `${serverId}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    serverId,
+    timestamp: new Date().toISOString(),
+    direction,
+    kind,
+    payload,
+  };
+}
+
+function classifyMessage(message: JsonRpcMessage): TrafficEntry["kind"] {
+  if ("id" in message && "result" in message) {
+    return "response";
+  }
+  if ("id" in message && "error" in message) {
+    return "error";
+  }
+  if ("id" in message) {
+    return "request";
+  }
+  return "notification";
+}
+
+export function useMcp() {
+  const {
+    servers,
+    updateServer,
+    recordTraffic,
+    setCapabilities,
+  } = useMcpServerStore((state) => ({
+    servers: state.servers,
+    updateServer: state.updateServer,
+    recordTraffic: state.recordTraffic,
+    setCapabilities: state.setCapabilities,
+  }));
+
+  const serverMap = useMemo(
+    () => new Map(servers.map((server) => [server.id, server])),
+    [servers]
+  );
+
+  const getClient = useCallback(
+    (serverId: string) => clientRegistry.get(serverId),
+    []
+  );
+
+  const connect = useCallback(
+    async (serverId: string) => {
+      const server = serverMap.get(serverId);
+      if (!server) {
+        return;
+      }
+      updateServer(serverId, { status: "connecting", lastError: undefined });
+      const transport = createTransport(server);
+      const client = new JsonRpcClient(transport, {
+        onSend: (message) =>
+          recordTraffic(
+            buildTrafficEntry(
+              serverId,
+              "outbound",
+              classifyMessage(message),
+              message
+            )
+          ),
+        onReceive: (message) =>
+          recordTraffic(
+            buildTrafficEntry(
+              serverId,
+              "inbound",
+              classifyMessage(message),
+              message
+            )
+          ),
+        onStatus: (status) => {
+          updateServer(serverId, {
+            status: status === "connected" ? "ready" : "disconnected",
+          });
+        },
+        onError: (error) => {
+          updateServer(serverId, { status: "error", lastError: error.message });
+        },
+      });
+      clientRegistry.set(serverId, client);
+      await client.connect();
+      updateServer(serverId, { lastConnectedAt: new Date().toISOString() });
+    },
+    [recordTraffic, serverMap, updateServer]
+  );
+
+  const disconnect = useCallback(
+    (serverId: string) => {
+      const client = clientRegistry.get(serverId);
+      client?.disconnect();
+      clientRegistry.delete(serverId);
+      updateServer(serverId, { status: "disconnected" });
+    },
+    [updateServer]
+  );
+
+  const initialize = useCallback(
+    async (serverId: string) => {
+      const client = clientRegistry.get(serverId);
+      if (!client) {
+        return;
+      }
+      updateServer(serverId, { status: "busy" });
+      const start = performance.now();
+      const result = (await client.request<McpServerCapabilities>(
+        "initialize",
+        {
+          clientInfo: {
+            name: "MCP Gateway UI",
+            version: "0.1.0",
+          },
+        }
+      )) as McpServerCapabilities;
+      const latency = Math.round(performance.now() - start);
+      updateServer(serverId, { status: "ready", latencyMs: latency });
+      if (result) {
+        setCapabilities(serverId, result);
+      }
+    },
+    [setCapabilities, updateServer]
+  );
+
+  const callTool = useCallback(
+    async (serverId: string, toolName: string, params: unknown) => {
+      const client = clientRegistry.get(serverId);
+      if (!client) {
+        return null;
+      }
+      updateServer(serverId, { status: "busy" });
+      try {
+        const result = await client.request("tools/call", {
+          name: toolName,
+          arguments: params,
+        });
+        updateServer(serverId, { status: "ready" });
+        return result;
+      } catch (error) {
+        updateServer(serverId, {
+          status: "error",
+          lastError: (error as Error).message,
+        });
+        return null;
+      }
+    },
+    [updateServer]
+  );
+
+  const readResource = useCallback(
+    async (serverId: string, uri: string) => {
+      const client = clientRegistry.get(serverId);
+      if (!client) {
+        return null;
+      }
+      updateServer(serverId, { status: "busy" });
+      try {
+        const result = await client.request("resources/read", { uri });
+        updateServer(serverId, { status: "ready" });
+        return result;
+      } catch (error) {
+        updateServer(serverId, {
+          status: "error",
+          lastError: (error as Error).message,
+        });
+        return null;
+      }
+    },
+    [updateServer]
+  );
+
+  return {
+    connect,
+    disconnect,
+    initialize,
+    callTool,
+    readResource,
+    getClient,
+  };
+}
