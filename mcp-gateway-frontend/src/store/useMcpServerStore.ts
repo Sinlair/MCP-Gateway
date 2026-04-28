@@ -48,15 +48,18 @@ const createState: StateCreator<McpServerStore> = (set) => ({
     }),
   clearTraffic: () => set({ traffic: [] }),
   setCapabilities: (serverId, capabilities) =>
-    set((state: McpServerStore) => ({
-      servers: state.servers.map((server) =>
-        server.id === serverId ? { ...server, capabilities } : server
-      ),
-      selectedTool:
-        state.selectedTool && capabilities.tools.some((tool) => tool.name === state.selectedTool)
-          ? state.selectedTool
-          : capabilities.tools[0]?.name,
-    })),
+    set((state: McpServerStore) => {
+      const tools = capabilities?.tools ?? [];
+      return {
+        servers: state.servers.map((server) =>
+          server.id === serverId ? { ...server, capabilities } : server
+        ),
+        selectedTool:
+          state.selectedTool && tools.some((tool) => tool.name === state.selectedTool)
+            ? state.selectedTool
+            : tools[0]?.name,
+      };
+    }),
 });
 
 export const createMcpServerStore = () =>

@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 
-import { JsonRpcClient } from "@/lib/jsonrpc";
+import { JsonRpcClient, createJsonRpcId } from "@/lib/jsonrpc";
 import {
   SseTransport,
   StdioTransport,
@@ -44,7 +44,7 @@ function buildTrafficEntry(
   payload: JsonRpcMessage
 ): TrafficEntry {
   return {
-    id: `${serverId}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    id: `${serverId}-${createJsonRpcId()}`,
     serverId,
     timestamp: new Date().toISOString(),
     direction,

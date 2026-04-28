@@ -99,6 +99,7 @@ export class WebSocketTransport implements McpTransport {
       const now = Date.now();
       if (now - this.lastMessageAt > timeoutMs) {
         this.handlers.onError?.(new Error("WebSocket heartbeat timeout."));
+        this.socket?.close();
         this.scheduleReconnect();
       }
       const ping: JsonRpcNotification = {

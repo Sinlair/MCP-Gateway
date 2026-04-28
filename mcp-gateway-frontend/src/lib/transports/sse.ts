@@ -99,6 +99,7 @@ export class SseTransport implements McpTransport {
       const now = Date.now();
       if (now - this.lastMessageAt > timeoutMs) {
         this.handlers.onError?.(new Error("SSE heartbeat timeout."));
+        this.eventSource?.close();
         this.scheduleReconnect();
       }
       const ping: JsonRpcNotification = {

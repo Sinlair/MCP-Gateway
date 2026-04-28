@@ -24,6 +24,31 @@ type ResourceNodeInternal = {
   children: Record<string, ResourceNodeInternal>;
 };
 
+const mimeLanguageMap: Record<string, string> = {
+  "application/json": "json",
+  "text/json": "json",
+  "application/javascript": "javascript",
+  "text/javascript": "javascript",
+  "application/typescript": "typescript",
+  "application/x-typescript": "typescript",
+  "text/typescript": "typescript",
+  "text/plain": "text",
+  "text/markdown": "markdown",
+  "text/html": "html",
+  "text/css": "css",
+  "application/xml": "xml",
+  "text/xml": "xml",
+  "application/x-yaml": "yaml",
+  "text/yaml": "yaml",
+};
+
+function resolveLanguage(mimeType?: string) {
+  if (!mimeType) {
+    return "text";
+  }
+  return mimeLanguageMap[mimeType] ?? mimeType.split("/")[1] ?? "text";
+}
+
 function buildResourceTree(resources: McpResource[]): ResourceNode[] {
   const root: Record<string, ResourceNodeInternal> = {};
 
@@ -162,7 +187,7 @@ export function ResourceBrowser({
           {content ? (
             <ScrollArea className="h-[420px]">
               <SyntaxHighlighter
-                language={mimeType?.split("/")[1] ?? "json"}
+                language={resolveLanguage(mimeType)}
                 style={vscDarkPlus}
                 customStyle={{
                   background: "transparent",
