@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 
 import { JsonRpcClient, createJsonRpcId } from "@/lib/jsonrpc";
+import { APP_VERSION } from "@/lib/version";
 import {
   SseTransport,
   StdioTransport,
@@ -155,7 +156,7 @@ export function useMcp() {
         {
           clientInfo: {
             name: "MCP Gateway UI",
-            version: "0.1.0",
+            version: APP_VERSION,
           },
         }
       )) as McpServerCapabilities;

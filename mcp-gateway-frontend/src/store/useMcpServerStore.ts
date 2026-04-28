@@ -1,14 +1,29 @@
 import { create, type StateCreator } from "zustand";
 import { createStore } from "zustand/vanilla";
 
-import type { McpServer, McpServerStore, TrafficEntry } from "@/types";
+import type {
+  McpServer,
+  McpServerStore,
+  TrafficEntry,
+  TransportType,
+} from "@/types";
+
+const allowedTransports: TransportType[] = ["sse", "websocket", "stdio"];
+const defaultTransport = allowedTransports.includes(
+  process.env.NEXT_PUBLIC_MCP_TRANSPORT as TransportType
+)
+  ? (process.env.NEXT_PUBLIC_MCP_TRANSPORT as TransportType)
+  : "sse";
+const defaultEndpoint =
+  process.env.NEXT_PUBLIC_MCP_ENDPOINT ?? "http://localhost:3000/mcp";
+const defaultName = process.env.NEXT_PUBLIC_MCP_NAME ?? "Local MCP Server";
 
 const defaultServers: McpServer[] = [
   {
     id: "local-sse",
-    name: "Local MCP Server",
-    endpoint: "http://localhost:3000/mcp",
-    transport: "sse",
+    name: defaultName,
+    endpoint: defaultEndpoint,
+    transport: defaultTransport,
     status: "disconnected",
   },
 ];
