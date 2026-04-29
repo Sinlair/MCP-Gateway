@@ -26,7 +26,7 @@ const state = {
         tools: [],
         selectedTool: null,
         traffic: [],
-        result: "MCP 调用结果会显示在这里。",
+        result: "暂无结果",
         history: loadMcpHistory(),
         pending: new Map()
     }
@@ -260,41 +260,11 @@ function renderDashboard(session, overview) {
     $("#dashboard-caller").text(overview ? overview.callerId : session.profile || "-");
     $("#dashboard-request-id").text(state.lastRequestId || "-");
     $("#dashboard-expire-time").text(formatDateTime(session.expiresAt));
+    $("#dashboard-request-tip").text("-");
     $("#dashboard-scope-badges").html(buildScopeBadges(session.scopes));
 
-    const priorities = [];
-    if (!overview) {
-        priorities.push({ title: "先刷新网关概览", detail: "当前还没有拿到最新概览，先确认系统状态再操作。" });
-    } else {
-        if (overview.routableUpstreams === 0) {
-            priorities.push({ title: "当前没有可路由上游", detail: "建议先去上游资源页面检查健康状态或补充服务。" });
-        }
-        if (overview.discoverableTools > 0) {
-            priorities.push({ title: "可以直接进入 MCP 实验室", detail: `当前可见 ${overview.discoverableTools} 个工具，适合先做一次真实调用。` });
-        } else {
-            priorities.push({ title: "当前没有可见工具", detail: "工具目录或访问策略可能还没准备好，建议先检查配置。" });
-        }
-        if (session.managedSystems && session.managedSystems.length) {
-            priorities.push({ title: "big-market 已在当前权限范围内", detail: "如果你要验证业务侧动作，可以直接进入 big-market 操作台。" });
-        }
-    }
-    if (!priorities.length) {
-        priorities.push({ title: "工作台已就绪", detail: "你可以从左侧导航直接进入配置区或 MCP 实验室。" });
-    }
-
-    $("#dashboard-priority-list").html(
-        priorities
-            .map((item) => `
-                <div class="metric-panel">
-                    <div class="metric-label">${escapeHtml(item.title)}</div>
-                    <div class="text-muted small">${escapeHtml(item.detail)}</div>
-                </div>
-            `)
-            .join("")
-    );
-
     if (!overview || !overview.enabledServers || !overview.enabledServers.length) {
-        renderStateMessage("#dashboard-upstream-grid", "当前还没有启用的上游服务");
+        renderStateMessage("#dashboard-upstream-grid", "暂无数据");
         return;
     }
 
@@ -901,7 +871,7 @@ function renderMcpToolSelect() {
         return;
     }
     if (!state.mcp.tools.length) {
-        $select.html('<option value="">请先连接并加载工具列表...</option>');
+        $select.html('<option value="">暂无工具</option>');
         $("#mcpSchemaPreview").text("{}");
         return;
     }
@@ -965,7 +935,7 @@ function renderMcpTraffic() {
         $window.html(`
             <div class="text-center text-muted py-5" id="mcpTrafficPlaceholder">
                 <i class="bi bi-broadcast-pin fs-3 d-block mb-2"></i>
-                还没有 MCP 消息。先建立 SSE 连接，再执行 initialize 或 tools/call。
+                暂无消息
             </div>
         `);
         return;
@@ -996,7 +966,7 @@ function renderMcpTraffic() {
 
 function renderMcpResult() {
     if ($("#mcpResultOutput").length) {
-        $("#mcpResultOutput").text(state.mcp.result || "MCP 调用结果会显示在这里。");
+        $("#mcpResultOutput").text(state.mcp.result || "暂无结果");
     }
 }
 

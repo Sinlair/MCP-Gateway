@@ -87,13 +87,12 @@
         <div class="card h-100 mb-4">
             <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="bi bi-tools me-2"></i>工具调用</h5>
-                <span class="text-muted small">连接、发现、调用都在这里完成</span>
             </div>
             <div class="card-body">
                 <div class="mb-3">
                     <label class="form-label">已发现工具</label>
                     <select class="form-select" id="mcpToolSelect">
-                        <option value="">请先连接并加载工具列表...</option>
+                        <option value="">暂无工具</option>
                     </select>
                 </div>
                 <div class="row">
@@ -112,7 +111,7 @@
                     </button>
                 </div>
                 <div class="result-panel">
-                    <pre class="mb-0" id="mcpResultOutput">MCP 调用结果会显示在这里。</pre>
+                    <pre class="mb-0" id="mcpResultOutput">暂无结果</pre>
                 </div>
             </div>
         </div>
@@ -128,7 +127,7 @@
                 <div class="history-window" id="mcpTrafficWindow">
                     <div class="text-center text-muted py-5" id="mcpTrafficPlaceholder">
                         <i class="bi bi-broadcast-pin fs-3 d-block mb-2"></i>
-                        还没有 MCP 消息。先建立 SSE 连接，再执行 initialize 或 tools/call。
+                        暂无消息
                     </div>
                 </div>
             </div>
@@ -140,7 +139,7 @@
             </div>
             <div class="card-body">
                 <div class="result-panel">
-                    <pre class="mb-0" id="bigMarketResult">big-market 操作结果会显示在这里。</pre>
+                    <pre class="mb-0" id="bigMarketResult">暂无结果</pre>
                 </div>
             </div>
         </div>

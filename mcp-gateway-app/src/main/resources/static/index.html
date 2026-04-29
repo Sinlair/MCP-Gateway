@@ -9,102 +9,43 @@
     <link rel="stylesheet" href="/assets/styles.css">
 </head>
 <body class="workspace-access-body">
-<div class="container py-5">
+<div class="container">
     <div class="row justify-content-center">
-        <div class="col-xl-10">
-            <div class="row g-4 align-items-stretch">
-                <div class="col-lg-6">
-                    <div class="access-story-card h-100">
-                        <div class="access-brand">
-                            <span class="access-brand-mark">MG</span>
-                            <div>
-                                <p class="text-uppercase small text-primary fw-semibold mb-2">MCP Gateway</p>
-                                <h1 class="display-5 fw-semibold mb-3">进入控制台，直接开始查看状态和执行操作。</h1>
-                            </div>
-                        </div>
-
-                        <p class="text-secondary fs-5 mb-4">
-                            这里先给你可用的入口，再把配置能力放到后面。
-                            先看状态，再做调用或系统操作，需要时再进入配置页面。
-                        </p>
-
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <div class="access-feature-card h-100">
-                                    <span class="access-step">01</span>
-                                    <strong>选择进入方式</strong>
-                                    <small>可以直接进入演示视图，也可以使用已有令牌进入。</small>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="access-feature-card h-100">
-                                    <span class="access-step">02</span>
-                                    <strong>查看当前状态</strong>
-                                    <small>先确认权限、环境和服务可用性，再决定下一步操作。</small>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="access-feature-card h-100">
-                                    <span class="access-step">03</span>
-                                    <strong>直接执行动作</strong>
-                                    <small>可以调用工具、操作业务系统，配置能力按需使用。</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+        <div class="col-md-8 col-lg-6 col-xl-5">
+            <div class="login-card workspace-card">
+                <div class="login-header">
+                    <i class="bi bi-hdd-network display-4 mb-3 d-block"></i>
+                    <h2 class="fw-bold mb-2">MCP Gateway 控制台</h2>
+                    <p class="mb-0 opacity-75">选择进入方式</p>
                 </div>
 
-                <div class="col-lg-6">
-                    <div class="login-card workspace-card">
-                        <div class="login-header">
-                            <i class="bi bi-hdd-network display-4 mb-3 d-block"></i>
-                            <h2 class="fw-bold mb-2">进入控制台</h2>
-                            <p class="mb-0 opacity-75">可以直接进入演示视图，也可以粘贴已有令牌</p>
-                        </div>
-
-                        <div class="login-body">
-                            <div class="d-grid gap-3 mb-4">
-                                <button type="button" class="btn btn-primary btn-login btn-lg" id="enterDemoAdminBtn">
-                                    <i class="bi bi-stars me-2"></i>进入管理员视图
-                                </button>
-                                <button type="button" class="btn btn-outline-primary btn-lg rounded-pill" id="enterDemoAppBtn">
-                                    <i class="bi bi-person-badge me-2"></i>进入调用方视图
-                                </button>
-                            </div>
-
-                            <div class="text-center text-muted small my-3">或者使用已有令牌</div>
-
-                            <form id="customTokenForm">
-                                <div class="form-floating mb-3">
-                                    <textarea class="form-control token-textarea" id="customBearerToken" placeholder="粘贴 Bearer Token" required></textarea>
-                                    <label for="customBearerToken"><i class="bi bi-key me-2"></i>Bearer Token</label>
-                                </div>
-                                <div class="d-grid">
-                                    <button type="submit" class="btn btn-dark rounded-pill py-3 fw-semibold">
-                                        <i class="bi bi-box-arrow-in-right me-2"></i>使用这个令牌进入
-                                    </button>
-                                </div>
-                            </form>
-
-                            <div id="accessError" class="alert alert-danger d-none mt-4 py-2 small align-items-center" role="alert">
-                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                                <span></span>
-                            </div>
-
-                            <div class="alert alert-light border mt-4 mb-0">
-                                <div class="d-flex align-items-start gap-2">
-                                    <i class="bi bi-info-circle text-primary mt-1"></i>
-                                    <div class="small text-muted">
-                                        管理员演示视图适合快速查看状态、执行操作和验证调用链路。
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                <div class="login-body">
+                    <div class="d-grid gap-3 mb-4">
+                        <button type="button" class="btn btn-primary btn-login btn-lg" id="enterDemoAdminBtn">
+                            <i class="bi bi-stars me-2"></i>进入管理员视图
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-lg rounded-pill" id="enterDemoAppBtn">
+                            <i class="bi bi-person-badge me-2"></i>进入调用方视图
+                        </button>
                     </div>
 
-                    <div class="text-center mt-4 text-muted small">
-                        <span class="me-3"><i class="bi bi-lock"></i> 令牌访问</span>
-                        <span><i class="bi bi-broadcast"></i> 实时连接</span>
+                    <div class="text-center text-muted small my-3">或者使用已有令牌</div>
+
+                    <form id="customTokenForm">
+                        <div class="form-floating mb-3">
+                            <textarea class="form-control token-textarea" id="customBearerToken" placeholder="粘贴 Bearer Token" required></textarea>
+                            <label for="customBearerToken"><i class="bi bi-key me-2"></i>Bearer Token</label>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-dark rounded-pill py-3 fw-semibold">
+                                <i class="bi bi-box-arrow-in-right me-2"></i>使用这个令牌进入
+                            </button>
+                        </div>
+                    </form>
+
+                    <div id="accessError" class="alert alert-danger d-none mt-4 py-2 small align-items-center" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <span></span>
                     </div>
                 </div>
             </div>
