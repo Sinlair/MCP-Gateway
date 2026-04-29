@@ -55,9 +55,9 @@
     function authLabel() {
         const auth = readAuth();
         if (!auth) {
-            return "Workspace";
+            return "控制台";
         }
-        return auth.label || auth.profile || "Workspace";
+        return auth.label || auth.profile || "控制台";
     }
 
     function currentEnvironment() {

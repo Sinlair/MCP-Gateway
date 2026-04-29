@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCP Gateway 工作台入口</title>
+    <title>MCP Gateway 控制台入口</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/assets/styles.css">
@@ -18,36 +18,36 @@
                         <div class="access-brand">
                             <span class="access-brand-mark">MG</span>
                             <div>
-                                <p class="text-uppercase small text-primary fw-semibold mb-2">MCP Gateway Workspace</p>
-                                <h1 class="display-5 fw-semibold mb-3">直接进入可用工作台，不先被后台表单淹没。</h1>
+                                <p class="text-uppercase small text-primary fw-semibold mb-2">MCP Gateway</p>
+                                <h1 class="display-5 fw-semibold mb-3">进入控制台，直接开始查看状态和执行操作。</h1>
                             </div>
                         </div>
 
                         <p class="text-secondary fs-5 mb-4">
-                            这套前端直接继承 `ai-mcp-gateway` 的“管理台 + 测试台”工作流，但登录方式改成更符合当前项目的
-                            Token 访问模型。先确认身份，再进入控制台、系统操作和 MCP 实验室。
+                            这里先给你可用的入口，再把配置能力放到后面。
+                            先看状态，再做调用或系统操作，需要时再进入配置页面。
                         </p>
 
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <div class="access-feature-card h-100">
                                     <span class="access-step">01</span>
-                                    <strong>进入工作台</strong>
-                                    <small>一键签发演示令牌，直接进入管理员或调用方视图。</small>
+                                    <strong>选择进入方式</strong>
+                                    <small>可以直接进入演示视图，也可以使用已有令牌进入。</small>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="access-feature-card h-100">
                                     <span class="access-step">02</span>
-                                    <strong>验证链路</strong>
-                                    <small>控制台、big-market 操作、MCP 调用实验室都在同一个壳里。</small>
+                                    <strong>查看当前状态</strong>
+                                    <small>先确认权限、环境和服务可用性，再决定下一步操作。</small>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="access-feature-card h-100">
                                     <span class="access-step">03</span>
-                                    <strong>需要时再配置</strong>
-                                    <small>上游、工具和策略作为后置能力，不抢第一屏注意力。</small>
+                                    <strong>直接执行动作</strong>
+                                    <small>可以调用工具、操作业务系统，配置能力按需使用。</small>
                                 </div>
                             </div>
                         </div>
@@ -58,21 +58,21 @@
                     <div class="login-card workspace-card">
                         <div class="login-header">
                             <i class="bi bi-hdd-network display-4 mb-3 d-block"></i>
-                            <h2 class="fw-bold mb-2">进入 MCP Gateway 工作台</h2>
-                            <p class="mb-0 opacity-75">支持演示令牌一键进入，也支持粘贴已有 Bearer Token</p>
+                            <h2 class="fw-bold mb-2">进入控制台</h2>
+                            <p class="mb-0 opacity-75">可以直接进入演示视图，也可以粘贴已有令牌</p>
                         </div>
 
                         <div class="login-body">
                             <div class="d-grid gap-3 mb-4">
                                 <button type="button" class="btn btn-primary btn-login btn-lg" id="enterDemoAdminBtn">
-                                    <i class="bi bi-stars me-2"></i>进入管理员工作台
+                                    <i class="bi bi-stars me-2"></i>进入管理员视图
                                 </button>
                                 <button type="button" class="btn btn-outline-primary btn-lg rounded-pill" id="enterDemoAppBtn">
                                     <i class="bi bi-person-badge me-2"></i>进入调用方视图
                                 </button>
                             </div>
 
-                            <div class="text-center text-muted small my-3">或者使用已有 Bearer Token</div>
+                            <div class="text-center text-muted small my-3">或者使用已有令牌</div>
 
                             <form id="customTokenForm">
                                 <div class="form-floating mb-3">
@@ -81,7 +81,7 @@
                                 </div>
                                 <div class="d-grid">
                                     <button type="submit" class="btn btn-dark rounded-pill py-3 fw-semibold">
-                                        <i class="bi bi-box-arrow-in-right me-2"></i>使用这个 Token 进入
+                                        <i class="bi bi-box-arrow-in-right me-2"></i>使用这个令牌进入
                                     </button>
                                 </div>
                             </form>
@@ -95,8 +95,7 @@
                                 <div class="d-flex align-items-start gap-2">
                                     <i class="bi bi-info-circle text-primary mt-1"></i>
                                     <div class="small text-muted">
-                                        管理员演示令牌默认带上 `big-market-71772-z` 的受管系统权限，进入后可以直接使用
-                                        big-market 操作台和标准 MCP 实验室。
+                                        管理员演示视图适合快速查看状态、执行操作和验证调用链路。
                                     </div>
                                 </div>
                             </div>
@@ -104,8 +103,8 @@
                     </div>
 
                     <div class="text-center mt-4 text-muted small">
-                        <span class="me-3"><i class="bi bi-lock"></i> Bearer Token Access</span>
-                        <span><i class="bi bi-broadcast"></i> Standard MCP over SSE</span>
+                        <span class="me-3"><i class="bi bi-lock"></i> 令牌访问</span>
+                        <span><i class="bi bi-broadcast"></i> 实时连接</span>
                     </div>
                 </div>
             </div>

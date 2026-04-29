@@ -95,24 +95,20 @@ function initViewLogic(targetId) {
         initDashboard();
         return;
     }
-    if (targetId === "upstreams") {
+    if (targetId === "gateway-list") {
         initUpstreamsView();
         return;
     }
-    if (targetId === "tools") {
+    if (targetId === "gateway-tool") {
         initToolsView();
         return;
     }
-    if (targetId === "policies") {
+    if (targetId === "gateway-auth") {
         initPoliciesView();
         return;
     }
-    if (targetId === "big-market") {
-        initBigMarketView();
-        return;
-    }
-    if (targetId === "mcp-lab") {
-        initMcpLabView();
+    if (targetId === "gateway-test") {
+        initGatewayTestView();
     }
 }
 
@@ -602,6 +598,11 @@ function initBigMarketView() {
     ));
 }
 
+function initGatewayTestView() {
+    initBigMarketView();
+    initMcpLabView();
+}
+
 function bigMarketPayload() {
     return {
         userId: $("#bmUserId").val().trim(),
@@ -823,7 +824,7 @@ async function initializeMcpSession() {
     try {
         const result = await sendMcpRequest("initialize", {
             clientInfo: {
-                name: "MCP Gateway Admin Workspace",
+                name: "MCP Gateway Console",
                 version: "1.0.0"
             }
         });
