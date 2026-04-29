@@ -1,6 +1,19 @@
 spring:
   application:
     name: mcp-gateway
+  datasource:
+    url: jdbc:h2:file:./data/mcp-gateway-admin;MODE=MySQL;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:/sql/legacy-gateway-schema.sql
 
 server:
   port: 8080
@@ -30,3 +43,6 @@ mcp:
       ttl-hours: 12
       clock-skew-seconds: 30
       audit-retention: 200
+
+mybatis:
+  mapper-locations: classpath:/mybatis/legacy/*.xml

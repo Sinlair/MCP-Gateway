@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mcpgateway.app.legacy.persistence.McpGatewayAuthDao">
+
+    <resultMap id="McpGatewayAuthMap" type="com.mcpgateway.app.legacy.persistence.McpGatewayAuthPO">
+        <id column="id" property="id"/>
+        <result column="gateway_id" property="gatewayId"/>
+        <result column="api_key" property="apiKey"/>
+        <result column="rate_limit" property="rateLimit"/>
+        <result column="expire_time" property="expireTime"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.mcpgateway.app.legacy.persistence.McpGatewayAuthPO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO mcp_gateway_auth (gateway_id, api_key, rate_limit, expire_time, status)
+        VALUES (#{gatewayId}, #{apiKey}, #{rateLimit}, #{expireTime}, #{status})
+    </insert>
+
+    <update id="updateByGatewayId" parameterType="com.mcpgateway.app.legacy.persistence.McpGatewayAuthPO">
+        UPDATE mcp_gateway_auth
+        SET rate_limit = #{rateLimit},
+            expire_time = #{expireTime},
+            update_time = CURRENT_TIMESTAMP
+        WHERE gateway_id = #{gatewayId}
+    </update>
+
+    <delete id="deleteByGatewayId" parameterType="java.lang.String">
+        DELETE FROM mcp_gateway_auth WHERE gateway_id = #{gatewayId}
+    </delete>
+
+    <select id="queryAll" resultMap="McpGatewayAuthMap">
+        SELECT id, gateway_id, api_key, rate_limit, expire_time, status, create_time, update_time
+        FROM mcp_gateway_auth
+        ORDER BY id DESC
+    </select>
+
+    <select id="queryMcpGatewayAuthPO" parameterType="com.mcpgateway.app.legacy.persistence.McpGatewayAuthPO" resultMap="McpGatewayAuthMap">
+        SELECT id, gateway_id, api_key, rate_limit, expire_time, status, create_time, update_time
+        FROM mcp_gateway_auth
+        WHERE gateway_id = #{gatewayId}
+        <if test="apiKey != null and apiKey != ''">
+            AND api_key = #{apiKey}
+        </if>
+    </select>
+
+    <select id="queryEffectiveGatewayAuthCount" parameterType="java.lang.String" resultType="java.lang.Integer">
+        SELECT count(*)
+        FROM mcp_gateway_auth
+        WHERE gateway_id = #{gatewayId} AND status = 1
+    </select>
+
+    <select id="queryAuthList" parameterType="com.mcpgateway.app.legacy.persistence.McpGatewayAuthPO" resultMap="McpGatewayAuthMap">
+        SELECT id, gateway_id, api_key, rate_limit, expire_time, status, create_time, update_time
+        FROM mcp_gateway_auth
+        <where>
+            <if test="gatewayId != null and gatewayId != ''">
+                AND gateway_id like concat('%', #{gatewayId}, '%')
+            </if>
+        </where>
+        ORDER BY update_time DESC
+        <if test="limitStart != null and limitCount != null">
+            LIMIT #{limitStart}, #{limitCount}
+        </if>
+    </select>
+
+    <select id="queryAuthListCount" parameterType="com.mcpgateway.app.legacy.persistence.McpGatewayAuthPO" resultType="java.lang.Long">
+        SELECT count(id)
+        FROM mcp_gateway_auth
+        <where>
+            <if test="gatewayId != null and gatewayId != ''">
+                AND gateway_id like concat('%', #{gatewayId}, '%')
+            </if>
+        </where>
+    </select>
+
+    <select id="queryListByGatewayId" parameterType="java.lang.String" resultMap="McpGatewayAuthMap">
+        SELECT id, gateway_id, api_key, rate_limit, expire_time, status, create_time, update_time
+        FROM mcp_gateway_auth
+        WHERE gateway_id = #{gatewayId}
+        ORDER BY update_time DESC
+    </select>
+
+</mapper>

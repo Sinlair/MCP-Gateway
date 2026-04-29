@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mcpgateway.app.legacy.persistence.McpGatewayDao">
+
+    <resultMap id="McpGatewayMap" type="com.mcpgateway.app.legacy.persistence.McpGatewayPO">
+        <id column="id" property="id"/>
+        <result column="gateway_id" property="gatewayId"/>
+        <result column="gateway_name" property="gatewayName"/>
+        <result column="gateway_desc" property="gatewayDesc"/>
+        <result column="version" property="version"/>
+        <result column="auth" property="auth"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.mcpgateway.app.legacy.persistence.McpGatewayPO" useGeneratedKeys="true" keyProperty="id">
+        MERGE INTO mcp_gateway (gateway_id, gateway_name, gateway_desc, version, auth, status, update_time)
+        KEY(gateway_id)
+        VALUES (#{gatewayId}, #{gatewayName}, #{gatewayDesc}, #{version}, #{auth}, #{status}, CURRENT_TIMESTAMP)
+    </insert>
+
+    <update id="updateAuthStatusByGatewayId" parameterType="com.mcpgateway.app.legacy.persistence.McpGatewayPO">
+        UPDATE mcp_gateway
+        SET auth = #{auth},
+            update_time = CURRENT_TIMESTAMP
+        WHERE gateway_id = #{gatewayId}
+    </update>
+
+    <select id="queryAll" resultMap="McpGatewayMap">
+        SELECT id, gateway_id, gateway_name, gateway_desc, version, auth, status, create_time, update_time
+        FROM mcp_gateway
+        ORDER BY id DESC
+    </select>
+
+    <select id="queryMcpGatewayByGatewayId" parameterType="java.lang.String" resultMap="McpGatewayMap">
+        SELECT id, gateway_id, gateway_name, gateway_desc, version, auth, status, create_time, update_time
+        FROM mcp_gateway
+        WHERE gateway_id = #{gatewayId}
+    </select>
+
+    <select id="queryGatewayList" parameterType="com.mcpgateway.app.legacy.persistence.McpGatewayPO" resultMap="McpGatewayMap">
+        SELECT id, gateway_id, gateway_name, gateway_desc, version, auth, status, create_time, update_time
+        FROM mcp_gateway
+        <where>
+            <if test="gatewayId != null and gatewayId != ''">
+                AND gateway_id like concat('%', #{gatewayId}, '%')
+            </if>
+            <if test="gatewayName != null and gatewayName != ''">
+                AND gateway_name like concat('%', #{gatewayName}, '%')
+            </if>
+        </where>
+        ORDER BY update_time DESC
+        <if test="limitStart != null and limitCount != null">
+            LIMIT #{limitStart}, #{limitCount}
+        </if>
+    </select>
+
+    <select id="queryGatewayListCount" parameterType="com.mcpgateway.app.legacy.persistence.McpGatewayPO" resultType="java.lang.Long">
+        SELECT count(id)
+        FROM mcp_gateway
+        <where>
+            <if test="gatewayId != null and gatewayId != ''">
+                AND gateway_id like concat('%', #{gatewayId}, '%')
+            </if>
+            <if test="gatewayName != null and gatewayName != ''">
+                AND gateway_name like concat('%', #{gatewayName}, '%')
+            </if>
+        </where>
+    </select>
+
+</mapper>

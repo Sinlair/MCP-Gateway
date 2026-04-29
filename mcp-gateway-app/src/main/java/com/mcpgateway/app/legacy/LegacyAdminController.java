@@ -24,9 +24,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class LegacyAdminController {
 
     private final LegacyGatewayStore store;
+    private final LegacyMcpGatewayService legacyMcpGatewayService;
 
-    public LegacyAdminController(LegacyGatewayStore store) {
+    public LegacyAdminController(LegacyGatewayStore store, LegacyMcpGatewayService legacyMcpGatewayService) {
         this.store = store;
+        this.legacyMcpGatewayService = legacyMcpGatewayService;
     }
 
     @PostMapping("/save_gateway_config")
@@ -237,18 +239,12 @@ public class LegacyAdminController {
                 return ResponseEntity.ok(failure("auth api key expired"));
             }
         }
-        List<GatewayToolRecord> tools = store.toolsByGatewayId(gatewayId);
-        String answer = "Gateway " + gatewayId + " received your request.\n\n"
-                + "Message: " + (message == null ? "" : message) + "\n"
-                + "Configured tools: " + tools.size() + "\n"
-                + (tools.isEmpty()
-                ? "No gateway tools configured yet."
-                : "Tool list: " + tools.stream().map(GatewayToolRecord::toolName).collect(Collectors.joining(", ")));
-        return ResponseEntity.ok(success(Map.of(
-                "gatewayId", gatewayId,
-                "answer", answer,
-                "content", answer
-        )));
+        try {
+            legacyMcpGatewayService.requireAccess(gatewayId, authApiKey);
+            return ResponseEntity.ok(success(legacyMcpGatewayService.testGatewayCall(gatewayId, message)));
+        } catch (Exception exception) {
+            return ResponseEntity.ok(failure(exception.getMessage()));
+        }
     }
 
     private Map<String, Object> toGatewayConfigDto(GatewayConfigRecord record) {

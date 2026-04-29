@@ -3,3 +3,4 @@ target/
 /.vscode/
 *.iml
 *.log
+/mcp-gateway-app/data/

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mcpgateway.app.legacy.persistence.McpGatewayToolDao">
+
+    <resultMap id="McpGatewayToolMap" type="com.mcpgateway.app.legacy.persistence.McpGatewayToolPO">
+        <id column="id" property="id"/>
+        <result column="gateway_id" property="gatewayId"/>
+        <result column="tool_id" property="toolId"/>
+        <result column="tool_name" property="toolName"/>
+        <result column="tool_type" property="toolType"/>
+        <result column="tool_description" property="toolDescription"/>
+        <result column="tool_version" property="toolVersion"/>
+        <result column="protocol_id" property="protocolId"/>
+        <result column="protocol_type" property="protocolType"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.mcpgateway.app.legacy.persistence.McpGatewayToolPO">
+        MERGE INTO mcp_gateway_tool (gateway_id, tool_id, tool_name, tool_type, tool_description, tool_version, protocol_id, protocol_type, update_time)
+        KEY(tool_id)
+        VALUES (#{gatewayId}, #{toolId}, #{toolName}, #{toolType}, #{toolDescription}, #{toolVersion}, #{protocolId}, #{protocolType}, CURRENT_TIMESTAMP)
+    </insert>
+
+    <update id="updateProtocolByGatewayId" parameterType="com.mcpgateway.app.legacy.persistence.McpGatewayToolPO">
+        UPDATE mcp_gateway_tool
+        SET protocol_id = #{protocolId},
+            protocol_type = #{protocolType},
+            update_time = CURRENT_TIMESTAMP
+        WHERE gateway_id = #{gatewayId}
+    </update>
+
+    <select id="queryListByGatewayId" parameterType="java.lang.String" resultMap="McpGatewayToolMap">
+        SELECT id, gateway_id, tool_id, tool_name, tool_type, tool_description, tool_version, protocol_id, protocol_type, create_time, update_time
+        FROM mcp_gateway_tool
+        WHERE gateway_id = #{gatewayId}
+    </select>
+
+    <select id="queryToolList" parameterType="com.mcpgateway.app.legacy.persistence.McpGatewayToolPO" resultMap="McpGatewayToolMap">
+        SELECT id, gateway_id, tool_id, tool_name, tool_type, tool_description, tool_version, protocol_id, protocol_type, create_time, update_time
+        FROM mcp_gateway_tool
+        <where>
+            <if test="gatewayId != null and gatewayId != ''">
+                AND gateway_id like concat('%', #{gatewayId}, '%')
+            </if>
+            <if test="toolId != null">
+                AND tool_id = #{toolId}
+            </if>
+            <if test="toolName != null and toolName != ''">
+                AND tool_name like concat('%', #{toolName}, '%')
+            </if>
+        </where>
+        ORDER BY update_time DESC
+        <if test="limitStart != null and limitCount != null">
+            LIMIT #{limitStart}, #{limitCount}
+        </if>
+    </select>
+
+    <select id="queryToolListCount" parameterType="com.mcpgateway.app.legacy.persistence.McpGatewayToolPO" resultType="java.lang.Long">
+        SELECT count(id)
+        FROM mcp_gateway_tool
+        <where>
+            <if test="gatewayId != null and gatewayId != ''">
+                AND gateway_id like concat('%', #{gatewayId}, '%')
+            </if>
+            <if test="toolId != null">
+                AND tool_id = #{toolId}
+            </if>
+            <if test="toolName != null and toolName != ''">
+                AND tool_name like concat('%', #{toolName}, '%')
+            </if>
+        </where>
+    </select>
+
+    <select id="queryAll" resultMap="McpGatewayToolMap">
+        SELECT id, gateway_id, tool_id, tool_name, tool_type, tool_description, tool_version, protocol_id, protocol_type, create_time, update_time
+        FROM mcp_gateway_tool
+    </select>
+
+    <delete id="deleteByToolId" parameterType="java.lang.Long">
+        DELETE FROM mcp_gateway_tool WHERE tool_id = #{toolId}
+    </delete>
+
+</mapper>
