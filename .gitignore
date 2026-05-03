@@ -4,3 +4,4 @@ target/
 *.iml
 *.log
 /mcp-gateway-app/data/
+/data/

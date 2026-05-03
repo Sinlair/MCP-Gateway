@@ -12,6 +12,7 @@ export interface SseTransportOptions extends TransportOptions {
 export class SseTransport implements McpTransport {
   public readonly type = "sse" as const;
   private eventSource?: EventSource;
+  private postUrl?: string;
   private handlers: TransportHandlers = {};
   private reconnectAttempts = 0;
   private heartbeatTimer?: ReturnType<typeof setInterval>;
@@ -26,7 +27,7 @@ export class SseTransport implements McpTransport {
 
   async connect() {
     this.closed = false;
-    this.openEventSource();
+    await this.openEventSource();
     this.startHeartbeat();
   }
 
@@ -34,12 +35,16 @@ export class SseTransport implements McpTransport {
     this.closed = true;
     this.eventSource?.close();
     this.eventSource = undefined;
+    this.postUrl = undefined;
     this.clearHeartbeat();
     this.handlers.onStatus?.("disconnected");
   }
 
   async send(message: JsonRpcRequest | JsonRpcNotification) {
-    const postUrl = this.options.postUrl ?? this.options.endpoint;
+    const postUrl = this.postUrl ?? this.options.postUrl;
+    if (!postUrl) {
+      throw new Error("SSE message endpoint is not ready.");
+    }
     await fetch(postUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -49,30 +54,69 @@ export class SseTransport implements McpTransport {
 
   private openEventSource() {
     if (this.closed) {
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve, reject) => {
+      this.eventSource?.close();
+      this.postUrl = undefined;
+      this.eventSource = new EventSource(this.options.endpoint);
+      let settled = false;
+
+      const timeout = setTimeout(() => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        this.eventSource?.close();
+        this.handlers.onStatus?.("error");
+        reject(new Error("SSE endpoint negotiation timeout."));
+      }, 10000);
+
+      const resolveConnected = () => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        clearTimeout(timeout);
+        this.reconnectAttempts = 0;
+        this.handlers.onStatus?.("connected");
+        resolve();
+      };
+
+      this.eventSource.onopen = () => {
+        this.reconnectAttempts = 0;
+      };
+      this.eventSource.addEventListener("endpoint", (event) => {
+        this.lastMessageAt = Date.now();
+        this.postUrl = (event as MessageEvent<string>).data;
+        resolveConnected();
+      });
+      this.eventSource.onmessage = (event) => {
+        this.handleMessageEvent(event);
+      };
+      this.eventSource.onerror = () => {
+        this.handlers.onStatus?.("error");
+        this.scheduleReconnect();
+        if (!settled) {
+          settled = true;
+          clearTimeout(timeout);
+          reject(new Error("SSE connection failed."));
+        }
+      };
+    });
+  }
+
+  private handleMessageEvent(event: MessageEvent<string>) {
+    this.lastMessageAt = Date.now();
+    if (!event.data) {
       return;
     }
-    this.eventSource?.close();
-    this.eventSource = new EventSource(this.options.endpoint);
-    this.eventSource.onopen = () => {
-      this.reconnectAttempts = 0;
-      this.handlers.onStatus?.("connected");
-    };
-    this.eventSource.onmessage = (event) => {
-      this.lastMessageAt = Date.now();
-      if (!event.data) {
-        return;
-      }
-      try {
-        const parsed = JSON.parse(event.data) as JsonRpcMessage;
-        this.handlers.onMessage?.(parsed);
-      } catch (error) {
-        this.handlers.onError?.(error as Error);
-      }
-    };
-    this.eventSource.onerror = () => {
-      this.handlers.onStatus?.("error");
-      this.scheduleReconnect();
-    };
+    try {
+      const parsed = JSON.parse(event.data) as JsonRpcMessage;
+      this.handlers.onMessage?.(parsed);
+    } catch (error) {
+      this.handlers.onError?.(error as Error);
+    }
   }
 
   private scheduleReconnect() {
@@ -88,7 +132,11 @@ export class SseTransport implements McpTransport {
       return;
     }
     this.reconnectAttempts += 1;
-    setTimeout(() => this.openEventSource(), delay * this.reconnectAttempts);
+    setTimeout(() => {
+      void this.openEventSource().catch((error) =>
+        this.handlers.onError?.(error as Error)
+      );
+    }, delay * this.reconnectAttempts);
   }
 
   private startHeartbeat() {
@@ -106,7 +154,9 @@ export class SseTransport implements McpTransport {
         jsonrpc: "2.0",
         method: "ping",
       };
-      void this.send(ping);
+      void this.send(ping).catch((error) =>
+        this.handlers.onError?.(error as Error)
+      );
     }, intervalMs);
   }
 

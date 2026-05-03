@@ -72,18 +72,35 @@ export class JsonRpcClient {
     params?: TParams
   ): Promise<TResult> {
     const message = createJsonRpcRequest(method, params);
-    this.options.onSend?.(message);
-    await this.transport.send(message);
-
-    return new Promise<TResult>((resolve, reject) => {
+    const pendingResponse = new Promise<TResult>((resolve, reject) => {
       const timeoutMs = this.options.timeoutMs ?? 30000;
       const timeout = setTimeout(() => {
         this.pending.delete(message.id);
         reject(new Error(`Request timeout for ${method}`));
       }, timeoutMs);
 
-      this.pending.set(message.id, { resolve, reject, timeout });
+      this.pending.set(message.id, {
+        resolve: (value) => resolve(value as TResult),
+        reject,
+        timeout,
+      });
     });
+
+    this.options.onSend?.(message);
+    try {
+      await this.transport.send(message);
+    } catch (error) {
+      const pending = this.pending.get(message.id);
+      if (pending) {
+        if (pending.timeout) {
+          clearTimeout(pending.timeout);
+        }
+        this.pending.delete(message.id);
+        pending.reject(error);
+      }
+    }
+
+    return pendingResponse;
   }
 
   async notify<TParams = unknown>(method: string, params?: TParams) {

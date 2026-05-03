@@ -68,17 +68,10 @@ function classifyMessage(message: JsonRpcMessage): TrafficEntry["kind"] {
 }
 
 export function useMcp() {
-  const {
-    servers,
-    updateServer,
-    recordTraffic,
-    setCapabilities,
-  } = useMcpServerStore((state) => ({
-    servers: state.servers,
-    updateServer: state.updateServer,
-    recordTraffic: state.recordTraffic,
-    setCapabilities: state.setCapabilities,
-  }));
+  const servers = useMcpServerStore((state) => state.servers);
+  const updateServer = useMcpServerStore((state) => state.updateServer);
+  const recordTraffic = useMcpServerStore((state) => state.recordTraffic);
+  const setCapabilities = useMcpServerStore((state) => state.setCapabilities);
 
   const serverMap = useMemo(
     () => new Map(servers.map((server) => [server.id, server])),
@@ -127,8 +120,17 @@ export function useMcp() {
         },
       });
       clientRegistry.set(serverId, client);
-      await client.connect();
-      updateServer(serverId, { lastConnectedAt: new Date().toISOString() });
+      try {
+        await client.connect();
+        updateServer(serverId, { lastConnectedAt: new Date().toISOString() });
+      } catch (error) {
+        clientRegistry.delete(serverId);
+        updateServer(serverId, {
+          status: "error",
+          lastError: (error as Error).message,
+        });
+        throw error;
+      }
     },
     [recordTraffic, serverMap, updateServer]
   );
@@ -151,19 +153,27 @@ export function useMcp() {
       }
       updateServer(serverId, { status: "busy" });
       const start = performance.now();
-      const result = (await client.request<McpServerCapabilities>(
-        "initialize",
-        {
-          clientInfo: {
-            name: "MCP Gateway UI",
-            version: APP_VERSION,
-          },
+      try {
+        const result = (await client.request<McpServerCapabilities>(
+          "initialize",
+          {
+            clientInfo: {
+              name: "智能服务网关控制台",
+              version: APP_VERSION,
+            },
+          }
+        )) as McpServerCapabilities;
+        const latency = Math.round(performance.now() - start);
+        updateServer(serverId, { status: "ready", latencyMs: latency });
+        if (result) {
+          setCapabilities(serverId, result);
         }
-      )) as McpServerCapabilities;
-      const latency = Math.round(performance.now() - start);
-      updateServer(serverId, { status: "ready", latencyMs: latency });
-      if (result) {
-        setCapabilities(serverId, result);
+      } catch (error) {
+        updateServer(serverId, {
+          status: "error",
+          lastError: (error as Error).message,
+        });
+        throw error;
       }
     },
     [setCapabilities, updateServer]

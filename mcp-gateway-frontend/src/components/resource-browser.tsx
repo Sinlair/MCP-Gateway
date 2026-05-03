@@ -1,12 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { FileCode2, Folder, PanelsTopLeft } from "lucide-react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 import type { McpResource } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
@@ -109,20 +109,22 @@ function ResourceTree({
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  "w-full justify-start",
-                  isSelected && "bg-secondary"
+                  "h-auto w-full justify-start gap-2 whitespace-normal rounded-md px-2 py-2 text-left text-slate-600 hover:bg-slate-100 hover:text-slate-950",
+                  isSelected && "bg-blue-50 text-blue-700 hover:bg-blue-50"
                 )}
                 style={{ paddingLeft: `${level * 12 + 8}px` }}
                 onClick={() => node.resource && onSelect(node.resource)}
               >
-                {node.name}
+                <FileCode2 className="h-4 w-4 shrink-0" />
+                <span className="min-w-0 truncate">{node.name}</span>
               </Button>
             ) : (
               <div
-                className="px-2 text-xs font-semibold text-muted-foreground"
+                className="flex items-center gap-2 px-2 py-1 text-xs font-semibold text-slate-500"
                 style={{ paddingLeft: `${level * 12 + 8}px` }}
               >
-                {node.name}
+                <Folder className="h-3.5 w-3.5" />
+                <span className="truncate">{node.name}</span>
               </div>
             )}
             {node.children.length > 0 ? (
@@ -159,16 +161,20 @@ export function ResourceBrowser({
 
   return (
     <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle>Resources</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[420px]">
+      <section className="h-full rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-950">资源目录</p>
+            <p className="mt-0.5 text-xs text-slate-500">{resources.length} 个资源</p>
+          </div>
+          <PanelsTopLeft className="h-4 w-4 text-slate-400" />
+        </div>
+        <div className="p-3">
+          <ScrollArea className="h-[470px]">
             {resources.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No resources advertised.
-              </p>
+              <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+                暂无已暴露资源
+              </div>
             ) : (
               <ResourceTree
                 nodes={tree}
@@ -177,15 +183,21 @@ export function ResourceBrowser({
               />
             )}
           </ScrollArea>
-        </CardContent>
-      </Card>
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle>Content Preview</CardTitle>
-        </CardHeader>
-        <CardContent>
+        </div>
+      </section>
+      <section className="h-full rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-950">内容预览</p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {mimeType ?? "选择资源后展示内容"}
+            </p>
+          </div>
+          <FileCode2 className="h-4 w-4 text-slate-400" />
+        </div>
+        <div className="p-4">
           {content ? (
-            <ScrollArea className="h-[420px]">
+            <ScrollArea className="h-[470px] rounded-lg bg-slate-950">
               <SyntaxHighlighter
                 language={resolveLanguage(mimeType)}
                 style={vscDarkPlus}
@@ -193,18 +205,26 @@ export function ResourceBrowser({
                   background: "transparent",
                   margin: 0,
                   fontSize: "0.75rem",
+                  padding: "1rem",
                 }}
               >
                 {content}
               </SyntaxHighlighter>
             </ScrollArea>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              Select a resource to read its content.
-            </p>
+            <div className="flex h-[470px] items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+              <div>
+                <p className="text-sm font-medium text-slate-700">
+                  选择资源查看内容
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  支持 JSON、文本、Markdown、HTML 等常见格式预览。
+                </p>
+              </div>
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     </div>
   );
 }

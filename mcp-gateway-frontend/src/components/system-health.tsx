@@ -62,7 +62,9 @@ export function SystemHealth() {
             >
               <div>
                 <p className="text-sm font-semibold">{server.name}</p>
-                <p className="text-xs text-muted-foreground">{server.endpoint}</p>
+                <p className="text-xs text-muted-foreground">
+                  {server.transport.toUpperCase()} 接入通道
+                </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant={statusTone[server.status]}>

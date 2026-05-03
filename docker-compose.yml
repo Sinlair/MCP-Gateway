@@ -1,0 +1,24 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: sinlair-mcp-gateway-backend
+    environment:
+      TZ: Asia/Shanghai
+    volumes:
+      - ./data:/app/data
+    expose:
+      - "8080"
+    restart: unless-stopped
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    container_name: sinlair-mcp-gateway
+    depends_on:
+      - backend
+    ports:
+      - "8081:80"
+    restart: unless-stopped
