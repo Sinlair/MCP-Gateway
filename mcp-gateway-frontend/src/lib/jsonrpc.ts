@@ -82,7 +82,11 @@ export class JsonRpcClient {
         reject(new Error(`Request timeout for ${method}`));
       }, timeoutMs);
 
-      this.pending.set(message.id, { resolve, reject, timeout });
+      this.pending.set(message.id, {
+        resolve: resolve as (value: unknown) => void,
+        reject,
+        timeout,
+      });
     });
   }
 
