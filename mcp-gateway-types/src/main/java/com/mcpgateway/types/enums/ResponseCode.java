@@ -24,5 +24,16 @@ public enum ResponseCode {
     public String message() {
         return message;
     }
-}
 
+    public static ResponseCode fromCode(String code) {
+        if (code == null) {
+            return SYSTEM_ERROR;
+        }
+        for (ResponseCode responseCode : values()) {
+            if (responseCode.code.equals(code)) {
+                return responseCode;
+            }
+        }
+        return SYSTEM_ERROR;
+    }
+}

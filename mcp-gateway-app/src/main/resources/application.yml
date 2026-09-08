@@ -23,6 +23,11 @@ managed-systems:
     api-version: v1
 
 mcp:
+  gateway:
+    tool-execution:
+      mode: mock
+      timeout-ms: 3000
+      max-retries: 1
   console:
     token:
       issuer: mcp-gateway

@@ -30,7 +30,50 @@ class GatewayConsoleMvcTests {
         mockMvc.perform(get("/api/v1/gateway/overview"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("A0401"))
+                .andExpect(jsonPath("$.message").value("Unauthorized"))
                 .andExpect(jsonPath("$.requestId").isNotEmpty());
+    }
+
+    @Test
+    void shouldReturnStandardizedBadRequestForInvalidToolRegistration() throws Exception {
+        mockMvc.perform(post("/api/v1/admin/tools")
+                        .header("X-API-Key", "demo-admin-key")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "environment":"dev",
+                                  "serverCode":"weather",
+                                  "toolName":" ",
+                                  "description":"invalid request",
+                                  "inputSchema":"{}",
+                                  "enabled":true
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("A0400"))
+                .andExpect(jsonPath("$.message").value("Bad request"));
+    }
+
+    @Test
+    void shouldReturnStandardizedSystemErrorWithoutLeakingDetails() throws Exception {
+        mockMvc.perform(post("/api/v1/admin/upstreams")
+                        .header("X-API-Key", "demo-admin-key")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "environment":"dev",
+                                  "serverCode":"broken",
+                                  "name":"Broken Server",
+                                  "baseUrl":"http://[invalid",
+                                  "transportType":"HTTP",
+                                  "authMode":"API_KEY",
+                                  "enabled":true,
+                                  "timeoutMs":3000
+                                }
+                                """))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("B0500"))
+                .andExpect(jsonPath("$.message").value("System error"));
     }
 
     @Test
@@ -129,6 +172,72 @@ class GatewayConsoleMvcTests {
                                 """))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("A0403"));
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenInvokingUnknownTool() throws Exception {
+        mockMvc.perform(post("/api/v1/gateway/tools/invoke")
+                        .header("X-API-Key", "demo-admin-key")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "environment":"dev",
+                                  "toolIdentifier":"weather:missing",
+                                  "arguments":{"city":"Shanghai"}
+                                }
+                                """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("A0404"))
+                .andExpect(jsonPath("$.message").value("Not found"));
+    }
+
+    @Test
+    void shouldReturnConflictWhenInvokingToolWithUnhealthyUpstream() throws Exception {
+        mockMvc.perform(post("/api/v1/admin/upstreams")
+                        .header("X-API-Key", "demo-admin-key")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "environment":"dev",
+                                  "serverCode":"stocks",
+                                  "name":"Stocks Server",
+                                  "baseUrl":"https://stocks.example.com/mcp",
+                                  "transportType":"HTTP",
+                                  "authMode":"API_KEY",
+                                  "enabled":true,
+                                  "timeoutMs":3000
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/admin/tools")
+                        .header("X-API-Key", "demo-admin-key")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "environment":"dev",
+                                  "serverCode":"stocks",
+                                  "toolName":"quote",
+                                  "description":"Return mock quote",
+                                  "inputSchema":"{\\"symbol\\":\\"string\\"}",
+                                  "enabled":true
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/gateway/tools/invoke")
+                        .header("X-API-Key", "demo-admin-key")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "environment":"dev",
+                                  "toolIdentifier":"stocks:quote",
+                                  "arguments":{"symbol":"AAPL"}
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("A0409"))
+                .andExpect(jsonPath("$.message").value("Conflict"));
     }
 
     @Test
